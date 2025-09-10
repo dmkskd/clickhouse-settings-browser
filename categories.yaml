@@ -1,0 +1,36 @@
+# Map categories to regex patterns matched against name and description.
+# You can add/remove categories or patterns as needed.
+
+Storage & IO:
+  - merge\s*tree
+  - s3
+  - disk
+  - zookeeper
+  - filesystem
+
+Performance:
+  - block_size
+  - threads?
+  - parallel
+  - cache
+
+Execution:
+  - join
+  - group\s*by
+  - limit
+  - order\s*by
+
+Networking:
+  - http
+  - tcp
+  - connect
+  - timeout
+
+Security:
+  - authentication
+  - ssl
+  - secure
+  - password
+
+Unsorted:
+  - .*

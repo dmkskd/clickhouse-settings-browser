@@ -1,0 +1,17 @@
+# Local Python
+.venv/
+__pycache__/
+*.pyc
+
+# Generated data
+settings.json
+!docs/settings.json
+
+# Heavy repos (keep local, do not push)
+ClickHouse/
+clickhouse-docs/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
