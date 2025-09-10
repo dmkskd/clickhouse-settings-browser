@@ -56,6 +56,7 @@ window.SettingsApp = (() => {
       { value: 'experimental', label: 'Experimental' },
     ];
     buildToggleGroup(els.tierGroup, tiers, getSelectedSet(els.tierGroup) || new Set(tiers.map(t => t.value)));
+    applyGroupTooltips();
   }
 
   function renderList() {
@@ -173,6 +174,8 @@ window.SettingsApp = (() => {
     els.themeToggle = el('themeToggle');
     els.scopeGroup = el('scopeGroup');
     els.categoryGroup = el('categoryGroup');
+    els.catAll = el('catAll');
+    els.catNone = el('catNone');
     els.tierGroup = el('tierGroup');
     els.searchInput = el('searchInput');
     els.list = el('list');
@@ -187,6 +190,8 @@ window.SettingsApp = (() => {
     await loadData();
     renderControls();
     updateTitleVersion();
+    if (els.catAll) els.catAll.addEventListener('click', () => setAllSelected(els.categoryGroup, true));
+    if (els.catNone) els.catNone.addEventListener('click', () => setAllSelected(els.categoryGroup, false));
     attachEvents();
     renderList();
   }
@@ -227,16 +232,68 @@ window.SettingsApp = (() => {
       if (selectedSet && selectedSet.has(opt.value)) btn.classList.add('selected');
       btn.textContent = opt.label;
       btn.dataset.value = opt.value;
+      // Default title, overridden by applyGroupTooltips()
+      btn.title = opt.label + ' — Alt-click: only this';
       btn.setAttribute('aria-pressed', selectedSet && selectedSet.has(opt.value) ? 'true' : 'false');
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (ev) => {
+        if (ev.altKey || ev.metaKey || ev.shiftKey) {
+          // Solo selection: deselect siblings, select only this
+          container.querySelectorAll('.toggle').forEach(b => {
+            b.classList.remove('selected');
+            b.setAttribute('aria-pressed', 'false');
+          });
+          btn.classList.add('selected');
+          btn.setAttribute('aria-pressed', 'true');
+          container.dispatchEvent(new Event('change'));
+          return;
+        }
         btn.classList.toggle('selected');
         btn.setAttribute('aria-pressed', btn.classList.contains('selected') ? 'true' : 'false');
-        // Notify listeners
         container.dispatchEvent(new Event('change'));
       });
       container.appendChild(btn);
     }
   }
+
+  function applyGroupTooltips() {
+    // Scope
+    if (els.scopeGroup) {
+      Array.from(els.scopeGroup.querySelectorAll('.toggle')).forEach(btn => {
+        const v = btn.dataset.value;
+        const soloHint = ' (Alt/⌥ or Cmd/⌘ or Shift-click: only this)';
+        if (v === 'session') btn.title = 'Session/query settings (system.settings)' + soloHint;
+        else if (v === 'mergetree') btn.title = 'MergeTree storage settings (table-level)' + soloHint;
+        else if (v === 'format') btn.title = 'Input/Output format settings' + soloHint;
+      });
+    }
+    // Category
+    if (els.categoryGroup) {
+      Array.from(els.categoryGroup.querySelectorAll('.toggle')).forEach(btn => {
+        btn.title = `Category: ${btn.textContent} (Alt/⌥ or Cmd/⌘ or Shift-click: only this)`;
+      });
+    }
+    // Tier with docs
+    const tierDoc = 'https://clickhouse.com/docs/beta-and-experimental-features';
+    if (els.tierGroup) {
+      Array.from(els.tierGroup.querySelectorAll('.toggle')).forEach(btn => {
+        const v = (btn.dataset.value || '').toLowerCase();
+        const soloHint = ' (Alt/⌥ or Cmd/⌘ or Shift-click: only this)';
+        if (v === 'production') btn.title = 'Production: safe to use with other production features' + soloHint;
+        else if (v === 'beta') btn.title = `Beta: stable but interactions may be unknown — ${tierDoc}` + soloHint;
+        else if (v === 'experimental') btn.title = `Experimental: in active development — ${tierDoc}` + soloHint;
+      });
+    }
+  }
+
+  // Bulk select helpers for category group
+  function setAllSelected(container, selected) {
+    container.querySelectorAll('.toggle').forEach(b => {
+      b.classList.toggle('selected', selected);
+      b.setAttribute('aria-pressed', selected ? 'true' : 'false');
+    });
+    container.dispatchEvent(new Event('change'));
+  }
+
 
   function getSelectedValues(container) {
     return Array.from(container.querySelectorAll('.toggle.selected')).map(el => el.dataset.value);
