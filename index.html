@@ -14,31 +14,22 @@
         <div class="controls">
       <div class="row">
         <div class="group">
-          <div class="group-label">Scope</div>
+          <div class="group-label emph">Scope</div>
           <div id="scopeGroup" class="checkgroup"></div>
         </div>
       </div>
-      <div class="row">
+      <div class="row section">
         <div class="group">
-          <div class="group-label">Subsystem</div>
+          <div class="group-label emph">Topic</div>
           <div>
-            <div id="subsystemGroup" class="checkgroup"></div>
-            <div class="group-actions"><button id="subAll" class="mini" title="Select all subsystems">All</button><button id="subNone" class="mini" title="Clear all subsystems">None</button></div>
+            <div id="topicGroup" class="checkgroup"></div>
+            <div class="group-actions"><button id="topicAll" class="mini" title="Select all topics">All</button><button id="topicNone" class="mini" title="Clear all topics">None</button></div>
           </div>
         </div>
       </div>
-          <div class="row">
+          <div class="row section">
             <div class="group">
-              <div class="group-label">Category</div>
-              <div>
-                <div id="categoryGroup" class="checkgroup"></div>
-                <div class="group-actions"><button id="catAll" class="mini" title="Select all categories">All</button><button id="catNone" class="mini" title="Clear all categories">None</button></div>
-              </div>
-            </div>
-          </div>
-          <div class="row">
-            <div class="group">
-              <div class="group-label">Tier</div>
+              <div class="group-label emph">Tier</div>
               <div id="tierGroup" class="checkgroup"></div>
             </div>
           </div>
@@ -71,7 +62,7 @@
           <ul>
             <li>Filters are multi‑select. Click to toggle.</li>
             <li>Solo a value: Alt/⌥, Cmd/⌘, or Shift‑click.</li>
-            <li>Category has All / None for bulk select.</li>
+            <li>Topic has All / None for bulk select.</li>
             <li>Tier meanings: <a href="https://clickhouse.com/docs/beta-and-experimental-features" target="_blank" rel="noopener noreferrer">Beta & Experimental</a>.</li>
             <li>Docs: 🔗 next to each setting name.</li>
             <li>Changed: shows settings with default changed vs previous version.</li>

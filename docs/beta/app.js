@@ -21,6 +21,20 @@ window.SettingsApp = (() => {
   // Track prior selection context to preserve user intent across scope changes
   let lastScopes = null; // Set of scope values
   let lastApplySubsysFilter = null; // boolean: whether a subsystem filter was applied previously
+  let lastApplyTopicFilter = null; // boolean: whether a unified topic filter was applied previously
+  // Topics we don't want duplicated as filters because they are primary scopes
+  const TOPIC_BLOCKLIST = new Set(['Formats', 'MergeTree', 'Session']);
+
+  function topicColorIndex(name) {
+    if (!name) return 0;
+    let h = 0;
+    const s = String(name);
+    for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; }
+    return h % 7; // 7-color palette
+  }
+  function topicColorClass(name) {
+    return 'tc-' + topicColorIndex(name);
+  }
 
   function el(id) { return document.getElementById(id); }
 
@@ -96,28 +110,24 @@ window.SettingsApp = (() => {
     // Default to latest
     els.versionSelect.selectedIndex = 0;
 
-    // Subsystem toggles (guarded)
-    const subs = uniqueSubsystems(settings);
-    if (els.subsystemGroup) {
-      // Decide selection preservation based on previous scope state and whether a subsystem filter was applied
+    // Unified Topic toggles (Categories ∪ Subsystems)
+    const cats = uniqueCategories(settings).filter(t => !TOPIC_BLOCKLIST.has(t));
+    const subs = uniqueSubsystems(settings).filter(t => !TOPIC_BLOCKLIST.has(t));
+    const topics = Array.from(new Set([...cats, ...subs])).sort((a,b)=>a.localeCompare(b));
+    if (els.topicGroup) {
       const newScopes = getSelectedScopes();
       const prevScopes = lastScopes instanceof Set ? lastScopes : null;
       const isSuperset = !!(prevScopes && newScopes.length >= prevScopes.size && Array.from(prevScopes).every(v => newScopes.includes(v)) && newScopes.length > prevScopes.size);
-      let sel = getSelectedSet(els.subsystemGroup);
-      if (isSuperset && lastApplySubsysFilter === false) {
-        // Previously no subsystem filter; expanding scopes should keep 'All' semantics
-        sel = new Set(subs);
+      let sel = getSelectedSet(els.topicGroup);
+      if (isSuperset && lastApplyTopicFilter === false) {
+        sel = new Set(topics);
       }
       buildToggleGroup(
-        els.subsystemGroup,
-        subs.map(s => ({ value: s, label: s })),
-        sel || new Set(subs)
+        els.topicGroup,
+        topics.map(t => ({ value: t, label: t, extraClass: 'topic ' + topicColorClass(t) })),
+        sel || new Set(topics)
       );
     }
-
-    // Category toggles
-    const cats = uniqueCategories(settings);
-    buildToggleGroup(els.categoryGroup, cats.map(c => ({ value: c, label: c })), getSelectedSet(els.categoryGroup) || new Set(cats));
 
     // Tier toggles
     const tiers = [
@@ -133,18 +143,22 @@ window.SettingsApp = (() => {
   function renderList() {
     const version = els.versionSelect.value;
     const scopes = getSelectedScopes();
-    const categories = getSelectedValues(els.categoryGroup);
+    const selectedTopics = new Set(getSelectedValues(els.topicGroup || { querySelectorAll: () => [] }));
     const q = els.searchInput.value.trim().toLowerCase();
     const selectedTiers = new Set(getSelectedValues(els.tierGroup));
-    const selectedSubsystems = new Set(getSelectedValues(els.subsystemGroup || { querySelectorAll: () => [] }));
-    const allSubsCount = (els.subsystemGroup && els.subsystemGroup.querySelectorAll) ? els.subsystemGroup.querySelectorAll('.toggle').length : 0;
-    const applySubsysFilter = selectedSubsystems.size > 0 && selectedSubsystems.size < allSubsCount;
+    const allTopicCount = (els.topicGroup && els.topicGroup.querySelectorAll) ? els.topicGroup.querySelectorAll('.toggle').length : 0;
+    const applyTopicFilter = selectedTopics.size > 0 && selectedTopics.size < allTopicCount;
     const cloudOnly = els.cloudOnly.checked;
     const changedOnly = els.changedOnly.checked;
 
     const items = combinedDataset(scopes).filter(s => {
-      // Filter by category
-      if (categories.length && !categories.includes(s.category || 'Uncategorized')) return false;
+      // Filter by topic (category or subsystem)
+      if (applyTopicFilter) {
+        const cat = s.category || 'Uncategorized';
+        const subs = (s._subsystems || s.subsystems || []);
+        const ok = selectedTopics.has(cat) || subs.some(x => selectedTopics.has(x));
+        if (!ok) return false;
+      }
       if (cloudOnly && !s.cloud_only) return false;
       // Filter by version presence
       if (!s.versions || !s.versions[version]) return false;
@@ -152,9 +166,7 @@ window.SettingsApp = (() => {
       const vinfo = s.versions[version];
       const stier = vinfo?.tier || parseTierFromFlags(s.flags) || 'production';
       if (selectedTiers.size && !selectedTiers.has(stier)) return false;
-      // Subsystem any-match: if user selected any subsystems, item must have at least one of them
-      const ssubs = (s._subsystems || s.subsystems || []);
-      if (applySubsysFilter && !ssubs.some(x => selectedSubsystems.has(x))) return false;
+      // Topic filter already applied above
       if (changedOnly && !vinfo?.changed_from_prev) return false;
       if (!q) return true;
       return (s._hayLower || '').includes(q);
@@ -167,9 +179,8 @@ window.SettingsApp = (() => {
     const changedLabel = changedOnly ? ' — Changed' : '';
     const scopeNames = scopes.map(s => s === 'mergetree' ? 'MergeTree' : (s === 'format' ? 'Formats' : 'Session'));
     const scopeLabel = scopeNames.length ? ` — Scopes: ${scopeNames.join(', ')}` : '';
-    const catLabel = categories.length ? ` — Categories: ${categories.slice(0,3).join(', ')}${categories.length>3?'…':''}` : '';
-    const subsLabel = applySubsysFilter ? ` — Subsystems: ${Array.from(selectedSubsystems).slice(0,3).join(', ')}${selectedSubsystems.size>3?'…':''}` : '';
-    els.stats.textContent = `${items.length} settings — ${version}` + scopeLabel + subsLabel + catLabel + tierLabel + (cloudOnly ? ' — Cloud-only' : '') + changedLabel;
+    const topicsLabel = applyTopicFilter ? ` — Topics: ${Array.from(selectedTopics).slice(0,3).join(', ')}${selectedTopics.size>3?'…':''}` : '';
+    els.stats.textContent = `${items.length} settings — ${version}` + scopeLabel + topicsLabel + tierLabel + (cloudOnly ? ' — Cloud-only' : '') + changedLabel;
 
     // Subsystem map removed to reduce clutter
 
@@ -185,10 +196,12 @@ window.SettingsApp = (() => {
       const descSnippet = (s.description || '').substring(0, 240);
       const catName = s.category || 'Uncategorized';
       const catClass = 'v-' + String(catName).toLowerCase().replace(/[^a-z0-9_-]/g,'');
+      const catColor = topicColorClass(catName);
       const docUrl = s.docs_url || buildDocsUrl(s._scope, s.name);
       const subsystems = (s._subsystems || s.subsystems || []);
       const subsFirst = subsystems.slice(0,1);
       const subsExtra = subsystems.length > 1 ? subsystems.length - 1 : 0;
+      const subsHiddenCSV = subsystems.slice(1).join(', ').replace(/&/g,'&amp;').replace(/\"/g,'&quot;').replace(/"/g,'&quot;');
       row.innerHTML = `
         <div class="h">
           <div class="name">${s.name}
@@ -196,10 +209,10 @@ window.SettingsApp = (() => {
           </div>
           <div class="meta">
             <span class="chip">${s.type}</span>
-            <span class="chip category ${catClass}">${catName}</span>
+            <span class="chip category topic ${catClass} ${catColor}">${catName}</span>
             <span class="chip scope">${s._scope === 'mergetree' ? 'MergeTree' : (s._scope === 'format' ? 'Formats' : 'Session')}</span>
-            ${subsFirst.map(x => `<span class="chip subsys">${x}</span>`).join('')}
-            ${subsExtra ? `<span class="chip subsys">+${subsExtra}</span>` : ''}
+            ${subsFirst.map(x => `<span class="chip subsys topic ${topicColorClass(x)}">${x}</span>`).join('')}
+            ${subsExtra ? `<span class="chip subsys more">+${subsExtra}</span>` : ''}
             ${stier === 'beta' ? `<span class="chip beta">Beta</span>` : ''}
             ${stier === 'experimental' ? `<span class="chip experimental">Experimental</span>` : ''}
             ${s.cloud_only ? `<span class="chip cloud">Cloud-only</span>` : ''}
@@ -215,14 +228,24 @@ window.SettingsApp = (() => {
           ${history.length ? `<details><summary>Version history</summary>${history.map(h => `<div class="history-row"><span class="tag">${h.version_minor}</span> <code>${escapeHtml(h.new_default)}</code> — ${escapeHtml(h.comment)}</div>`).join('')}</details>` : ''}
         </div>
       `;
+      // Attach hidden subsystems list to "+N" chip for tooltip
+      try {
+        const more = row.querySelector('.chip.subsys.more');
+        if (more) {
+          const csv = (subsystems.slice(1).join(', ')).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+          more.setAttribute('data-hidden', csv);
+          more.setAttribute('title', csv);
+        }
+      } catch {}
       frag.appendChild(row);
     });
     els.list.innerHTML = '';
     els.list.appendChild(frag);
+    try { attachSubsysChipTooltips(); } catch {}
     // Remember current state for next control rebuild
     try {
       lastScopes = new Set(scopes);
-      lastApplySubsysFilter = applySubsysFilter;
+      lastApplyTopicFilter = applyTopicFilter;
     } catch {}
     try { updateFacetCounts(); } catch (e) { dlog('updateFacetCounts error', e); }
   }
@@ -271,8 +294,7 @@ window.SettingsApp = (() => {
   function attachEvents() {
     els.scopeGroup.addEventListener('change', () => { renderControls(); renderList(); updateTitleVersion(); });
     els.versionSelect.addEventListener('change', () => { updateTitleVersion(); renderList(); });
-    els.categoryGroup.addEventListener('change', renderList);
-    if (els.subsystemGroup) els.subsystemGroup.addEventListener('change', renderList);
+    if (els.topicGroup) els.topicGroup.addEventListener('change', renderList);
     els.tierGroup.addEventListener('change', renderList);
     const debounced = debounce(renderList, 200);
     els.searchInput.addEventListener('input', debounced);
@@ -314,12 +336,9 @@ window.SettingsApp = (() => {
     els.titleVersion = el('titleVersion');
     els.themeToggle = el('themeToggle');
     els.scopeGroup = el('scopeGroup');
-    els.subsystemGroup = el('subsystemGroup');
-    els.categoryGroup = el('categoryGroup');
-    els.subAll = el('subAll');
-    els.subNone = el('subNone');
-    els.catAll = el('catAll');
-    els.catNone = el('catNone');
+    els.topicGroup = el('topicGroup');
+    els.topicAll = el('topicAll');
+    els.topicNone = el('topicNone');
     els.tierGroup = el('tierGroup');
     els.searchInput = el('searchInput');
     els.list = el('list');
@@ -334,10 +353,8 @@ window.SettingsApp = (() => {
     await loadData();
     renderControls();
     updateTitleVersion();
-    if (els.catAll) els.catAll.addEventListener('click', () => setAllSelected(els.categoryGroup, true));
-    if (els.catNone) els.catNone.addEventListener('click', () => setAllSelected(els.categoryGroup, false));
-    if (els.subAll && els.subsystemGroup) els.subAll.addEventListener('click', () => setAllSelected(els.subsystemGroup, true));
-    if (els.subNone && els.subsystemGroup) els.subNone.addEventListener('click', () => setAllSelected(els.subsystemGroup, false));
+    if (els.topicAll && els.topicGroup) els.topicAll.addEventListener('click', () => setAllSelected(els.topicGroup, true));
+    if (els.topicNone && els.topicGroup) els.topicNone.addEventListener('click', () => setAllSelected(els.topicGroup, false));
     attachEvents();
     renderList();
   }
@@ -378,7 +395,8 @@ window.SettingsApp = (() => {
     for (const opt of options) {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'toggle v-' + String(opt.value).toLowerCase().replace(/[^a-z0-9_-]/g,'');
+      const norm = String(opt.value).toLowerCase().replace(/[^a-z0-9_-]/g,'');
+      btn.className = 'toggle v-' + norm + (opt.extraClass ? (' ' + opt.extraClass) : '');
       if (selectedSet && selectedSet.has(opt.value)) btn.classList.add('selected');
       if (opt && typeof opt.count === 'number') {
         btn.innerHTML = `<span class="label">${opt.label}</span><span class="count" aria-hidden="true">${opt.count}</span>`;
@@ -410,46 +428,141 @@ window.SettingsApp = (() => {
   }
 
   function applyGroupTooltips() {
-    // Scope
-    if (els.scopeGroup) {
-      Array.from(els.scopeGroup.querySelectorAll('.toggle')).forEach(btn => {
-        const v = btn.dataset.value;
-        const soloHint = ' (Alt/⌥ or Cmd/⌘ or Shift-click: only this)';
-        if (v === 'session') btn.title = 'Session/query settings (system.settings)' + soloHint;
-        else if (v === 'mergetree') btn.title = 'MergeTree storage settings (table-level)' + soloHint;
-        else if (v === 'format') btn.title = 'Input/Output format settings' + soloHint;
-      });
-    }
-    // Category
-    if (els.categoryGroup) {
-      Array.from(els.categoryGroup.querySelectorAll('.toggle')).forEach(btn => {
-        btn.title = `Category: ${btn.textContent} (Alt/⌥ or Cmd/⌘ or Shift-click: only this)`;
-      });
-    }
-    // Tier with docs
+    // Attach rich tooltips to pills (Scope, Topic, Tier)
+    attachPillTooltips(els.scopeGroup, (btn) => {
+      const v = btn.dataset.value;
+      const desc = v === 'session' ? 'Session/query settings (system.settings)'
+        : v === 'mergetree' ? 'MergeTree storage settings (table-level)'
+        : v === 'format' ? 'Input/Output format settings'
+        : '';
+      return { title: `Scope: ${btn.textContent}`, meta: desc };
+    });
+    attachPillTooltips(els.topicGroup, (btn) => {
+      const name = btn.dataset.value;
+      const cnt = Number(btn.getAttribute('data-count') || '0');
+      const ex = btn.getAttribute('data-examples') || '';
+      const classes = Array.from(btn.classList).filter(c => /^tc-\d+$/.test(c));
+      return { title: `Topic: ${name}`, meta: `${cnt} setting${cnt===1?'':'s'}`, examples: ex, classes: ['topic', ...classes] };
+    });
     const tierDoc = 'https://clickhouse.com/docs/beta-and-experimental-features';
-    if (els.tierGroup) {
-      Array.from(els.tierGroup.querySelectorAll('.toggle')).forEach(btn => {
-        const v = (btn.dataset.value || '').toLowerCase();
-        const soloHint = ' (Alt/⌥ or Cmd/⌘ or Shift-click: only this)';
-        if (v === 'production') btn.title = 'Production: safe to use with other production features' + soloHint;
-        else if (v === 'beta') btn.title = `Beta: stable but interactions may be unknown — ${tierDoc}` + soloHint;
-        else if (v === 'experimental') btn.title = `Experimental: in active development — ${tierDoc}` + soloHint;
-      });
-    }
+    attachPillTooltips(els.tierGroup, (btn) => {
+      const v = (btn.dataset.value || '').toLowerCase();
+      const desc = v === 'production' ? 'Safe with other production features'
+        : v === 'beta' ? `Stable but interactions may be unknown — ${tierDoc}`
+        : v === 'experimental' ? `In active development — ${tierDoc}`
+        : '';
+      return { title: `Tier: ${btn.textContent}`, meta: desc };
+    });
   }
 
-  // Facet counts on selectors (scope, subsystem, category, tier)
+  // Global custom tooltip
+  let tooltipEl = null;
+  let tooltipHideTimer = null;
+  let tooltipShowTimer = null;
+  function ensureTooltip() {
+    if (!tooltipEl) {
+      tooltipEl = document.createElement('div');
+      tooltipEl.className = 'tooltip';
+      tooltipEl.style.display = 'none';
+      document.body.appendChild(tooltipEl);
+      // Keep tooltip visible while mouse is over it
+      tooltipEl.addEventListener('mouseenter', () => {
+        if (tooltipHideTimer) { clearTimeout(tooltipHideTimer); tooltipHideTimer = null; }
+      });
+      tooltipEl.addEventListener('mouseleave', () => {
+        scheduleHideTooltip(200);
+      });
+    }
+    return tooltipEl;
+  }
+  function showTooltipNear(el, content, extraClasses=[]) {
+    const t = ensureTooltip();
+    t.className = 'tooltip ' + extraClasses.join(' ');
+    t.innerHTML = content;
+    t.style.display = 'block';
+    const r = el.getBoundingClientRect();
+    const x = Math.min(window.innerWidth - t.offsetWidth - 12, r.left + window.scrollX + 8);
+    const y = r.bottom + window.scrollY + 8;
+    t.style.left = x + 'px';
+    t.style.top = y + 'px';
+  }
+  function hideTooltip() {
+    if (tooltipEl) tooltipEl.style.display = 'none';
+  }
+  function scheduleHideTooltip(delayMs) {
+    if (tooltipHideTimer) { clearTimeout(tooltipHideTimer); tooltipHideTimer = null; }
+    tooltipHideTimer = setTimeout(() => { hideTooltip(); tooltipHideTimer = null; }, delayMs);
+  }
+  function cancelHideTooltip() {
+    if (tooltipHideTimer) { clearTimeout(tooltipHideTimer); tooltipHideTimer = null; }
+  }
+  function scheduleShowTooltip(btn, builder, delayMs = 500) {
+    if (tooltipShowTimer) { clearTimeout(tooltipShowTimer); tooltipShowTimer = null; }
+    tooltipShowTimer = setTimeout(() => {
+      try {
+        const info = builder(btn) || {};
+        const metaLine = info.meta ? `<div class=\"meta\">${info.meta}</div>` : '';
+        const exLine = info.examples ? `<div class=\"ex\">Examples: ${info.examples}</div>` : '';
+        const hint = `<div class=\"hint\">Alt/⌥ or Cmd/⌘ or Shift-click: only this — Esc to close</div>`;
+        const html = `<div class=\"h\">${info.title || ''}</div>${metaLine}${exLine}${hint}`;
+        showTooltipNear(btn, html, info.classes || []);
+      } catch {}
+      tooltipShowTimer = null;
+    }, delayMs);
+  }
+  function cancelShowTooltip() {
+    if (tooltipShowTimer) { clearTimeout(tooltipShowTimer); tooltipShowTimer = null; }
+  }
+  function attachPillTooltips(container, builder) {
+    if (!container) return;
+    const pills = Array.from(container.querySelectorAll('.toggle'));
+    pills.forEach(btn => {
+      // Remove native tooltip to avoid overlap
+      if (btn.hasAttribute('title')) btn.removeAttribute('title');
+      btn.addEventListener('mouseenter', () => { cancelHideTooltip(); scheduleShowTooltip(btn, builder, 500); });
+      btn.addEventListener('mouseleave', () => { cancelShowTooltip(); scheduleHideTooltip(250); });
+      btn.addEventListener('click', () => { cancelShowTooltip(); hideTooltip(); });
+    });
+  }
+
+  // Show full list of hidden subsystems when hovering "+N" chip
+  function attachSubsysChipTooltips() {
+    if (!els.list) return;
+    const chips = Array.from(els.list.querySelectorAll('.chip.subsys.more'));
+    chips.forEach(chip => {
+      // Leave native title as fallback but prefer custom tooltip
+      chip.addEventListener('mouseenter', () => {
+        cancelHideTooltip();
+        const raw = chip.getAttribute('data-hidden') || '';
+        const names = raw.split(/\s*,\s*/).filter(Boolean);
+        const html = `<div class=\"h\">More topics</div>` +
+          (names.length ? `<div class=\"ex\">${names.join(', ')}</div>` : '') +
+          `<div class=\"hint\">Hover to copy — Esc to close</div>`;
+        showTooltipNear(chip, html, []);
+      });
+      chip.addEventListener('mouseleave', () => scheduleHideTooltip(250));
+      chip.addEventListener('click', hideTooltip);
+    });
+  }
+
+  // Allow closing tooltip with Escape key
+  window.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' || ev.key === 'Esc') {
+      cancelHideTooltip();
+      hideTooltip();
+    }
+  });
+
+  // Facet counts on selectors (scope, topics, tier)
   function passFilters(s, opts = {}) {
     const version = els.versionSelect.value;
     const cloudOnly = els.cloudOnly.checked;
     const changedOnly = els.changedOnly.checked;
     const q = els.searchInput.value.trim().toLowerCase();
-    const selectedCategories = new Set(getSelectedValues(els.categoryGroup));
     const selectedTiers = new Set(getSelectedValues(els.tierGroup));
-    const selectedSubsystems = new Set(getSelectedValues(els.subsystemGroup || { querySelectorAll: () => [] }));
-    const allSubsCount = (els.subsystemGroup && els.subsystemGroup.querySelectorAll) ? els.subsystemGroup.querySelectorAll('.toggle').length : 0;
-    const applySubsysFilter = selectedSubsystems.size > 0 && selectedSubsystems.size < allSubsCount;
+    const selectedTopics = new Set(getSelectedValues(els.topicGroup || { querySelectorAll: () => [] }));
+    const allTopicCount = (els.topicGroup && els.topicGroup.querySelectorAll) ? els.topicGroup.querySelectorAll('.toggle').length : 0;
+    const applyTopicFilter = selectedTopics.size > 0 && selectedTopics.size < allTopicCount;
 
     // Version presence
     if (!s.versions || !s.versions[version]) return false;
@@ -459,10 +572,10 @@ window.SettingsApp = (() => {
 
     if (cloudOnly && !s.cloud_only) return false;
     if (!opts.ignoreTier && selectedTiers.size && !selectedTiers.has(stier)) return false;
-    if (!opts.ignoreCategory && selectedCategories.size && !selectedCategories.has(s.category || 'Uncategorized')) return false;
-    if (!opts.ignoreSubsystem && applySubsysFilter) {
-      const ssubs = (s._subsystems || s.subsystems || []);
-      if (!ssubs.some(x => selectedSubsystems.has(x))) return false;
+    if (!opts.ignoreTopics && applyTopicFilter) {
+      const cat = s.category || 'Uncategorized';
+      const subs = (s._subsystems || s.subsystems || []);
+      if (!(selectedTopics.has(cat) || subs.some(x => selectedTopics.has(x)))) return false;
     }
     if (changedOnly && !vinfo?.changed_from_prev) return false;
     if (q && !(s._hayLower || '').includes(q)) return false;
@@ -488,51 +601,68 @@ window.SettingsApp = (() => {
       { value: 'format', label: 'Formats', count: scopeCounts.format || 0 },
     ], scopeSel);
 
-    // Subsystem counts within current scopes
+    // Topic counts
     const currentScopes = getSelectedScopes();
     const itemsInScopes = combinedDataset(currentScopes);
-    const subsCount = new Map();
+    const topicCount = new Map();
     for (const s of itemsInScopes) {
-      if (!passFilters(s, { ignoreSubsystem: true })) continue;
-      (s._subsystems || s.subsystems || []).forEach(x => subsCount.set(x, (subsCount.get(x)||0)+1));
+      if (!passFilters(s, { ignoreTopics: true })) continue;
+      const cat = s.category || 'Uncategorized';
+      if (!TOPIC_BLOCKLIST.has(cat)) {
+        topicCount.set(cat, (topicCount.get(cat)||0)+1);
+      }
+      (s._subsystems || s.subsystems || []).forEach(x => {
+        if (!TOPIC_BLOCKLIST.has(x)) topicCount.set(x, (topicCount.get(x)||0)+1);
+      });
     }
-    if (els.subsystemGroup) {
-      // Determine previous selection state before rebuilding
-      const prevVals = getSelectedValues(els.subsystemGroup);
-      const prevAllCount = els.subsystemGroup.querySelectorAll ? els.subsystemGroup.querySelectorAll('.toggle').length : 0;
+    if (els.topicGroup) {
+      const topics = Array.from(new Set(itemsInScopes.flatMap(s => {
+        const arr = [];
+        const cat = s.category || 'Uncategorized';
+        if (!TOPIC_BLOCKLIST.has(cat)) arr.push(cat);
+        for (const x of (s._subsystems || s.subsystems || [])) {
+          if (!TOPIC_BLOCKLIST.has(x)) arr.push(x);
+        }
+        return arr;
+      }))).sort((a,b)=>a.localeCompare(b));
+      const prevVals = getSelectedValues(els.topicGroup);
+      const prevAllCount = els.topicGroup.querySelectorAll ? els.topicGroup.querySelectorAll('.toggle').length : 0;
       const prevAll = prevVals.length === prevAllCount && prevAllCount > 0;
       const prevNone = prevVals.length === 0 && prevAllCount > 0;
-
-      const subs = Array.from(new Set(itemsInScopes.flatMap(s => (s._subsystems || s.subsystems || [])))).sort((a,b)=>a.localeCompare(b));
-
-      let subsSel;
-      if (prevAll) {
-        // Previously no filtering: select all new options
-        subsSel = new Set(subs);
-      } else if (prevNone) {
-        // Previously explicitly none: keep none
-        subsSel = new Set();
-      } else {
-        // Keep intersection of previous selection with new options
+      let topicSel;
+      if (prevAll) topicSel = new Set(topics);
+      else if (prevNone) topicSel = new Set();
+      else {
         const prevSet = new Set(prevVals);
-        subsSel = new Set(subs.filter(x => prevSet.has(x)));
-        // Safety: if intersection becomes empty but there are options, default to all to avoid accidental hidden filter
-        if (subsSel.size === 0 && subs.length > 0) subsSel = new Set(subs);
+        topicSel = new Set(topics.filter(x => prevSet.has(x)));
+        if (topicSel.size === 0 && topics.length > 0) topicSel = new Set(topics);
       }
-
-      buildToggleGroup(els.subsystemGroup, subs.map(name => ({ value: name, label: name, count: subsCount.get(name)||0 })), subsSel);
+      buildToggleGroup(els.topicGroup, topics.map(t => ({ value: t, label: t, count: topicCount.get(t)||0, extraClass: 'topic ' + topicColorClass(t) })), topicSel);
+      // Add counts/examples as data-* for tooltips
+      const btns = Array.from(els.topicGroup.querySelectorAll('.toggle'));
+      const examplesByTopic = new Map();
+      // Build examples list per topic (up to 3 names)
+      for (const t of topics) {
+        const ex = [];
+        for (const s of itemsInScopes) {
+          if (!passFilters(s, { ignoreTopics: true })) continue;
+          const cat = s.category || 'Uncategorized';
+          const subs = (s._subsystems || s.subsystems || []);
+          if (cat === t || subs.includes(t)) {
+            ex.push(s.name);
+            if (ex.length >= 3) break;
+          }
+        }
+        examplesByTopic.set(t, ex.join(', '));
+      }
+      btns.forEach(btn => {
+        const name = btn.dataset.value;
+        const cnt = topicCount.get(name) || 0;
+        btn.setAttribute('data-count', String(cnt));
+        const ex = examplesByTopic.get(name) || '';
+        if (ex) btn.setAttribute('data-examples', ex);
+      });
     }
-
-    // Category counts
-    const catCount = new Map();
-    for (const s of itemsInScopes) {
-      if (!passFilters(s, { ignoreCategory: true })) continue;
-      const c = s.category || 'Uncategorized';
-      catCount.set(c, (catCount.get(c)||0)+1);
-    }
-    const cats = Array.from(new Set(itemsInScopes.map(s => s.category || 'Uncategorized'))).sort((a,b)=>a.localeCompare(b));
-    const catSel = getSelectedSet(els.categoryGroup) || new Set(cats);
-    buildToggleGroup(els.categoryGroup, cats.map(c => ({ value: c, label: c, count: catCount.get(c)||0 })), catSel);
 
     // Tier counts
     const tierVals = ['production','beta','experimental'];
