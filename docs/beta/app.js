@@ -24,6 +24,16 @@ window.SettingsApp = (() => {
   let lastApplyTopicFilter = null; // boolean: whether a unified topic filter was applied previously
   // Topics we don't want duplicated as filters because they are primary scopes
   const TOPIC_BLOCKLIST = new Set(['Formats', 'MergeTree', 'Session']);
+  // Human-friendly explanations for relationship reasons
+  const REASON_TIPS = {
+    token_overlap: 'Names share meaningful tokens (same feature family).',
+    min_max_pair: 'Pair of min_* and max_* parameters for the same feature.',
+    initial_max_pair: 'Pair of initial_* and max_* parameters for the same feature.',
+    bytes_rows_pair: 'Two variants of the same limit: *_bytes vs *_rows.',
+    threads_pools: 'Threads and pools configuration that typically go together.',
+    co_changed: 'Settings changed in the same release (co-change signal).',
+    docs_comention: 'Settings co-mentioned together in ClickHouse docs.',
+  };
 
   function topicColorIndex(name) {
     if (!name) return 0;
@@ -189,6 +199,7 @@ window.SettingsApp = (() => {
     items.forEach(s => {
       const row = document.createElement('div');
       row.className = 'setting';
+      try { row.id = 's-' + String(s.name).toLowerCase().replace(/[^a-z0-9_-]/g,'-'); } catch {}
       const def = s.versions[version]?.default ?? '';
       const stier = s.versions[version]?.tier || parseTierFromFlags(s.flags) || 'production';
       const history = s.history || [];
@@ -237,10 +248,63 @@ window.SettingsApp = (() => {
           more.setAttribute('title', csv);
         }
       } catch {}
+      // Append enriched Related and Insights blocks if available
+      try {
+        const body = row.querySelector('.body');
+        if (Array.isArray(s.related) && s.related.length) {
+          const wrap = document.createElement('div');
+          wrap.className = 'related';
+          const title = document.createElement('span');
+          title.className = 'rel-title';
+          title.textContent = 'Related:';
+          wrap.appendChild(title);
+          s.related.slice(0,5).forEach(r => {
+            if (!r || !r.name) return;
+            const rid = 's-' + String(r.name).toLowerCase().replace(/[^a-z0-9_-]/g,'-');
+            const a = document.createElement('a');
+            a.className = 'chip link related-chip';
+            a.href = '#' + rid;
+            a.textContent = r.name;
+            if (Array.isArray(r.reasons)) a.title = r.reasons.slice(0,3).join(', ');
+            wrap.appendChild(a);
+            if (Array.isArray(r.reasons)) {
+              r.reasons.slice(0,2).forEach(rv => {
+                const b = document.createElement('span');
+                b.className = 'reason';
+                b.textContent = rv;
+                try { b.title = REASON_TIPS[rv] || rv; } catch {}
+                wrap.appendChild(b);
+              });
+            }
+          });
+          body.appendChild(wrap);
+        }
+        if (s.mentions && Array.isArray(s.mentions.docs) && s.mentions.docs.length) {
+          const det = document.createElement('details');
+          const sum = document.createElement('summary');
+          sum.textContent = 'Insights';
+          det.appendChild(sum);
+          s.mentions.docs.slice(0,2).forEach(m => {
+            const div = document.createElement('div');
+            div.className = 'mention';
+            const link = document.createElement('a');
+            link.href = m.url || '#';
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = 'Docs';
+            const txt = document.createTextNode(' — ' + (m.excerpt || ''));
+            div.appendChild(link);
+            div.appendChild(txt);
+            det.appendChild(div);
+          });
+          body.appendChild(det);
+        }
+      } catch {}
       frag.appendChild(row);
     });
     els.list.innerHTML = '';
     els.list.appendChild(frag);
+    try { attachSubsysChipTooltips(); } catch {}
     try { attachSubsysChipTooltips(); } catch {}
     // Remember current state for next control rebuild
     try {
@@ -519,7 +583,7 @@ window.SettingsApp = (() => {
     pills.forEach(btn => {
       // Remove native tooltip to avoid overlap
       if (btn.hasAttribute('title')) btn.removeAttribute('title');
-      btn.addEventListener('mouseenter', () => { cancelHideTooltip(); scheduleShowTooltip(btn, builder, 500); });
+      btn.addEventListener('mouseenter', () => { cancelHideTooltip(); scheduleShowTooltip(btn, builder, 100); });
       btn.addEventListener('mouseleave', () => { cancelShowTooltip(); scheduleHideTooltip(250); });
       btn.addEventListener('click', () => { cancelShowTooltip(); hideTooltip(); });
     });

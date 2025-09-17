@@ -167,3 +167,11 @@ details { margin-top: 8px; }
 summary { cursor: pointer; color: var(--accent); }
 .history-row { margin: 4px 0; color: var(--muted); }
 .history-row .tag { display: inline-block; background: var(--chip); border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 0 6px; margin-right: 6px; font-size: 11px; }
+
+/* Related + reasons */
+.related { margin-top: 6px; }
+.related .rel-title { font-weight: 600; margin-right: 6px; color: var(--fg); }
+.related .related-chip { margin-right: 6px; }
+.reason { display: inline-block; margin-left: 4px; padding: 1px 6px; border-radius: 999px; background: var(--chip); border: 1px solid var(--border); color: var(--muted); font-size: 10px; vertical-align: middle; }
+.reason { cursor: help; }
+.mention { margin: 4px 0; color: var(--muted); }

@@ -9,7 +9,7 @@ BETA_MINORS ?= 1
 BETA_CHANNEL ?= both
 
 .DEFAULT_GOAL := help
-.PHONY: help bootstrap refresh generate generate-tags serve clean deep-clean site site-static serve-site clean-site site-beta site-all site-data-only promote-ui
+.PHONY: help bootstrap refresh generate generate-tags serve clean deep-clean site site-static serve-site clean-site site-beta site-all site-data-only promote-ui enrich
 
 help: ## Show this help with target descriptions
 	@echo "Usage: make [target] [VAR=val ...]"; \
@@ -79,6 +79,9 @@ promote-ui: ## Copy index.html/app.js/style.css to docs/ and docs/beta without t
 	mkdir -p $(SITE_DIR) $(SITE_DIR)/beta
 	cp -f index.html app.js style.css $(SITE_DIR)/
 	cp -f index.html app.js style.css $(SITE_DIR)/beta/
+
+enrich: ## Enrich OUT=settings.json with related edges and docs mentions (DOCS=clickhouse-docs)
+	python3 enrich_settings.py --in $(OUT) --out $(OUT) --docs $(DOCS)
 
 serve-site: ## Serve $(SITE_DIR)/ at http://localhost:8000/
 	python3 -m http.server -d $(SITE_DIR)

@@ -22,6 +22,26 @@ Quick start
    - `python3 -m http.server` and browse to `http://localhost:8000/`
    - Or open `index.html` directly in a browser.
 
+Enrichment (Related + Docs Mentions)
+- Add relationships between settings (families, co-changes, docs co-mentions) and short docs excerpts.
+- Requires a generated `settings.json` and optionally a local `clickhouse-docs` clone for docs co-mentions.
+
+Steps
+1) Generate data as above (root `settings.json`).
+2) Enrich in place (no network):
+   - `make enrich OUT=settings.json DOCS=clickhouse-docs`
+   - This augments each setting with:
+     - `related`: top related settings with reasons (e.g., token_overlap, min_max_pair, co_changed, docs_comention)
+     - `mentions.docs`: list of `{url, excerpt}` from docs pages when available
+3) Reload the UI. Rows show:
+   - Colored Topic chips as before
+   - A “Related” line with quick links + reason badges
+   - An “Insights” section (expand) with docs snippets when available
+
+Notes
+- Enrichment is offline (no blog fetch). Phase 2 can add blog co-mentions if needed.
+- To regenerate site data without copying UI assets, use `make site-data-only`.
+
 Extractor features
 - Parses session settings from `src/Core/Settings.cpp` (COMMON_SETTINGS)
 - Parses MergeTree settings from `src/Storages/MergeTree/MergeTreeSettings.cpp` (MERGE_TREE_SETTINGS)
