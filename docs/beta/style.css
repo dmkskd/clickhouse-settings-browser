@@ -22,6 +22,8 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--fg); font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+main { padding: 20px; }
+#stats { margin: 0 0 12px; color: var(--muted); }
 
 header { padding: 16px 20px; border-bottom: 1px solid #222836; position: sticky; top: 0; background: var(--bg); z-index: 1; }
 h1 { margin: 0 0 10px; font-size: 20px; }
@@ -70,6 +72,7 @@ select:focus, input[type="search"]:focus { border-color: var(--accent); }
   box-shadow: 0 0 0 1px rgba(122,162,247,0.35) inset;
 }
 .checkgroup .toggle.selected::before { content: '✓'; margin-right: 6px; opacity: 0.9; }
+.checkgroup .toggle .count { margin-left: 6px; font-size: 10px; color: var(--muted); opacity: 0.9; }
 
 /* Scope-specific selected colors */
 #scopeGroup .toggle.selected { background: #291f35; border-color: #c0a0ff; box-shadow: 0 0 0 1px rgba(192,160,255,0.35) inset; }
@@ -87,42 +90,8 @@ select:focus, input[type="search"]:focus { border-color: var(--accent); }
 [data-theme="light"] .checkgroup .toggle.selected { background: #e9f0ff; border-color: var(--accent); color: var(--fg); box-shadow: 0 0 0 1px rgba(59,130,246,0.25) inset; }
 [data-theme="light"] #scopeGroup .toggle.selected { background: #efe7ff; border-color: #7c4dff; }
 [data-theme="light"] #tierGroup .toggle.v-production.selected { background: #e7f7ea; border-color: #10b981; }
-[data-theme="light"] #tierGroup .toggle.v-beta.selected { background: #fff3d6; border-color: #f59e0b; }
-[data-theme="light"] #tierGroup .toggle.v-experimental.selected { background: #ffe7de; border-color: #f97316; }
-[data-theme="light"] #categoryGroup .toggle.selected { background: #e9f0ff; }
-
-/* Category color coding for toggles and chips (based on categories.yaml) */
-#categoryGroup .toggle.v-storageio.selected { background: #1a2538; border-color: #7aa2f7; box-shadow: 0 0 0 1px rgba(122,162,247,0.35) inset; }
-#categoryGroup .toggle.v-performance.selected { background: #2a1f35; border-color: #c0a0ff; box-shadow: 0 0 0 1px rgba(192,160,255,0.35) inset; }
-#categoryGroup .toggle.v-execution.selected { background: #1c2f2d; border-color: #69d3b5; box-shadow: 0 0 0 1px rgba(105,211,181,0.35) inset; }
-#categoryGroup .toggle.v-networking.selected { background: #1c223a; border-color: #8aa1ff; box-shadow: 0 0 0 1px rgba(138,161,255,0.35) inset; }
-#categoryGroup .toggle.v-security.selected { background: #3a2323; border-color: #f7768e; box-shadow: 0 0 0 1px rgba(247,118,142,0.35) inset; }
-#categoryGroup .toggle.v-unsorted.selected { background: #222836; border-color: #5a6780; box-shadow: 0 0 0 1px rgba(90,103,128,0.35) inset; }
-#categoryGroup .toggle.v-uncategorized.selected { background: #222836; border-color: #5a6780; box-shadow: 0 0 0 1px rgba(90,103,128,0.35) inset; }
-
-/* Light theme overrides for category selected colors */
-[data-theme="light"] #categoryGroup .toggle.v-storageio.selected { background: #e9f0ff; border-color: #7aa2f7; color: var(--fg); box-shadow: 0 0 0 1px rgba(122,162,247,0.25) inset; }
-[data-theme="light"] #categoryGroup .toggle.v-performance.selected { background: #efe7ff; border-color: #c0a0ff; color: var(--fg); box-shadow: 0 0 0 1px rgba(192,160,255,0.25) inset; }
-[data-theme="light"] #categoryGroup .toggle.v-execution.selected { background: #e7f7f2; border-color: #69d3b5; color: var(--fg); box-shadow: 0 0 0 1px rgba(105,211,181,0.25) inset; }
-[data-theme="light"] #categoryGroup .toggle.v-networking.selected { background: #e9efff; border-color: #8aa1ff; color: var(--fg); box-shadow: 0 0 0 1px rgba(138,161,255,0.25) inset; }
-[data-theme="light"] #categoryGroup .toggle.v-security.selected { background: #ffe9ee; border-color: #f7768e; color: var(--fg); box-shadow: 0 0 0 1px rgba(247,118,142,0.25) inset; }
-[data-theme="light"] #categoryGroup .toggle.v-unsorted.selected,
-[data-theme="light"] #categoryGroup .toggle.v-uncategorized.selected { background: #eef1f6; border-color: #5a6780; color: var(--fg); box-shadow: 0 0 0 1px rgba(90,103,128,0.2) inset; }
-
-.chip.category.v-storageio { background: #0f1a2b; border-color: #7aa2f7; color: #cfe1ff; }
-.chip.category.v-performance { background: #21172b; border-color: #c0a0ff; color: #e7dcff; }
-.chip.category.v-execution { background: #112422; border-color: #69d3b5; color: #c8f2e6; }
-.chip.category.v-networking { background: #12182b; border-color: #8aa1ff; color: #d5ddff; }
-.chip.category.v-security { background: #241616; border-color: #f7768e; color: #ffd5db; }
-.chip.category.v-unsorted, .chip.category.v-uncategorized { background: #1b2030; border-color: #5a6780; color: #c7cfdb; }
-
-main { padding: 20px; }
-#stats { margin: 0 0 12px; color: var(--muted); }
-.subsys-map { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap: 8px; margin: 8px 0 12px; }
-.subsys-card { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border: 1px solid var(--border); background: var(--card); color: var(--fg); border-radius: 10px; cursor: pointer; font-size: 12px; }
-.subsys-card:hover { border-color: var(--accent); }
-.subsys-card.selected { box-shadow: 0 0 0 2px rgba(122,162,247,0.25) inset; }
-.subsys-card .count { color: var(--muted); }
+[data-theme="light"] #tierGroup .toggle.v-beta.selected { background: #fff3da; border-color: #f59e0b; }
+[data-theme="light"] #tierGroup .toggle.v-experimental.selected { background: #ffe8e3; border-color: #f78c6c; }
 
 .setting { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin: 10px 0; }
 .setting .h { display: flex; justify-content: space-between; align-items: center; gap: 12px; }

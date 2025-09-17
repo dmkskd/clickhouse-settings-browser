@@ -12,12 +12,21 @@
       <div class="leftcol">
         <h1>ClickHouse Settings Browser <span id="titleVersion" class="title-version"></span><button id="themeToggle" class="theme-toggle" title="Toggle light/dark">🌙</button></h1>
         <div class="controls">
-          <div class="row">
-            <div class="group">
-              <div class="group-label">Scope</div>
-              <div id="scopeGroup" class="checkgroup"></div>
-            </div>
+      <div class="row">
+        <div class="group">
+          <div class="group-label">Scope</div>
+          <div id="scopeGroup" class="checkgroup"></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="group">
+          <div class="group-label">Subsystem</div>
+          <div>
+            <div id="subsystemGroup" class="checkgroup"></div>
+            <div class="group-actions"><button id="subAll" class="mini" title="Select all subsystems">All</button><button id="subNone" class="mini" title="Clear all subsystems">None</button></div>
           </div>
+        </div>
+      </div>
           <div class="row">
             <div class="group">
               <div class="group-label">Category</div>

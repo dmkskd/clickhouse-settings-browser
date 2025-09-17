@@ -5,9 +5,11 @@ MINORS ?= 2
 CHANNEL ?= both
 VERSIONS ?=
 SITE_DIR ?= docs
+BETA_MINORS ?= 1
+BETA_CHANNEL ?= both
 
 .DEFAULT_GOAL := help
-.PHONY: help bootstrap refresh generate generate-tags serve clean deep-clean site site-static serve-site clean-site
+.PHONY: help bootstrap refresh generate generate-tags serve clean deep-clean site site-static serve-site clean-site site-beta site-all site-data-only promote-ui
 
 help: ## Show this help with target descriptions
 	@echo "Usage: make [target] [VAR=val ...]"; \
@@ -54,9 +56,29 @@ deep-clean: ## Remove local clones and generated artifacts
 site-static: ## Copy static assets to $(SITE_DIR)/
 	mkdir -p $(SITE_DIR)
 	cp -f index.html app.js style.css $(SITE_DIR)/
+	@if [ -f subsystems.png ]; then cp -f subsystems.png $(SITE_DIR)/; fi
 
 site: site-static ## Build site assets and generate $(SITE_DIR)/settings.json
 	$(MAKE) generate OUT=$(SITE_DIR)/settings.json
+
+site-beta: ## Build beta site under $(SITE_DIR)/beta and generate settings.json
+	mkdir -p $(SITE_DIR)/beta
+	cp -f index.html app.js style.css $(SITE_DIR)/beta/
+	@if [ -f subsystems.png ]; then cp -f subsystems.png $(SITE_DIR)/beta/; fi
+	$(MAKE) generate OUT=$(SITE_DIR)/beta/settings.json MINORS=$(BETA_MINORS) CHANNEL=$(BETA_CHANNEL)
+
+site-all: site site-beta ## Build both stable (/) and beta (/beta) sites
+
+# Generate only JSON data in docs/ (no UI asset copies)
+site-data-only: ## Generate docs/settings.json (and docs/beta/settings.json if BETA_* set)
+	$(MAKE) generate OUT=$(SITE_DIR)/settings.json
+	$(MAKE) generate OUT=$(SITE_DIR)/beta/settings.json MINORS=$(BETA_MINORS) CHANNEL=$(BETA_CHANNEL)
+
+# Promote current root UI to docs/ without regenerating data
+promote-ui: ## Copy index.html/app.js/style.css to docs/ and docs/beta without touching settings.json files
+	mkdir -p $(SITE_DIR) $(SITE_DIR)/beta
+	cp -f index.html app.js style.css $(SITE_DIR)/
+	cp -f index.html app.js style.css $(SITE_DIR)/beta/
 
 serve-site: ## Serve $(SITE_DIR)/ at http://localhost:8000/
 	python3 -m http.server -d $(SITE_DIR)

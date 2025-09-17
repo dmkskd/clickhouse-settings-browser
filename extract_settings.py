@@ -366,6 +366,70 @@ def is_cloud_only(description: str) -> bool:
     return any(re.search(p, text) for p in patterns)
 
 
+def infer_subsystems(name: str, description: str, scope: str) -> List[str]:
+    subs: List[str] = []
+    text = f"{name} {description}".lower()
+    def add(label: str):
+        if label not in subs:
+            subs.append(label)
+
+    # Scope-driven
+    if scope == 'mergetree':
+        add('MergeTree')
+    if scope == 'format':
+        add('Formats')
+
+    # Engines / integrations
+    if 'replica' in text or 'replicat' in text:
+        add('Replicated')
+    if 'distributed' in text:
+        add('Distributed')
+    if 'kafka' in text:
+        add('Kafka')
+    if 'zookeeper' in text or re.search(r"\bkeeper\b", text):
+        add('ZooKeeper/Keeper')
+    if 'mysql' in text:
+        add('MySQL')
+    if 'postgres' in text or 'psql' in text:
+        add('PostgreSQL')
+    if re.search(r"\bs3\b|minio", text):
+        add('S3')
+    if 'azure' in text:
+        add('Azure')
+    if 'hdfs' in text:
+        add('HDFS')
+    if 'rocksdb' in text:
+        add('RocksDB')
+
+    # Execution / coordination
+    if 'mutation' in text or 'lightweight_update' in text or 'update' in text or 'delete' in text:
+        add('Mutations')
+    if re.search(r"\bmerge(s)?\b", text):
+        add('Merges')
+    if 'thread' in text and 'pool' in text:
+        add('Thread Pools')
+    if 'on cluster' in text or 'distributed_ddl' in text or 'ddl ' in text:
+        add('Coordination/DDL')
+
+    # Caches
+    if 'mark_cache' in text or 'uncompressed_cache' in text or 'compiled_expression_cache' in text or 'filesystem_cache' in text:
+        add('Caches')
+
+    # Observability
+    if re.search(r"log|trace|profile|metrics|prometheus", text):
+        add('Observability')
+
+    # Resource Control
+    if re.search(r"max_.*memory|memory_.*|timeout|bandwidth|_pool_", text):
+        add('Resource Control')
+
+    # Security
+    if re.search(r"\bssl\b|secure|password|auth", text):
+        add('Security')
+
+    return subs
+
+
 def parse_flags(flags: str) -> Tuple[str, bool]:
     """Parse flags from Settings.cpp into (tier, important).
 
@@ -513,6 +577,7 @@ def extract_from_version(repo: str, rev: str, categories: Dict[str, List[str]]) 
         desc = unquote_cpp_string(d.description)
         cat = categorize(d.name, desc, categories)
         tier, important = parse_flags(d.flags)
+        subsystems = infer_subsystems(d.name, desc, 'session')
         result[d.name] = {
             "name": d.name,
             "type": d.type,
@@ -525,6 +590,7 @@ def extract_from_version(repo: str, rev: str, categories: Dict[str, List[str]]) 
             "tier": tier,
             "important": important,
             "docs_url": f"https://clickhouse.com/docs/operations/settings/settings#{d.name}",
+            "subsystems": subsystems,
         }
     return result
 

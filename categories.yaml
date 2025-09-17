@@ -1,36 +1,94 @@
-# Map categories to regex patterns matched against name and description.
-# You can add/remove categories or patterns as needed.
+# Category rules (first match wins). Patterns are regexes matched
+# against the concatenation of setting name and description.
+
+# Distributed/Coordination comes first to capture sharding + on cluster behavior
+Distributed & Coordination:
+  - \bdistributed\b
+  - on\s+cluster
+  - distributed_ddl
+  - \bshard(s)?\b
+  - replicat(?:e|ed|ion)
+  - \bkeeper\b
+  - zookeeper
 
 Storage & IO:
   - merge\s*tree
-  - s3
-  - disk
-  - zookeeper
-  - filesystem
-
-Performance:
-  - block_size
-  - threads?
-  - parallel
-  - cache
+  - \bparts?\b
+  - compact|granule|index\s+granularity
+  - filesystem|file\s*system
+  - disk|volume|storage\s+policy
+  - s3|minio|azure|hdfs|gcs|cos
+  - filesystem_cache|mark_cache|uncompressed_cache|compiled_expression_cache
+  - buffer\s+size|read\s*buffer|write\s*buffer
+  - compression|zstd|lz4
+  - \brocksdb\b
 
 Execution:
-  - join
-  - group\s*by
-  - limit
-  - order\s*by
+  - join|hash\s+join|merge\s+join
+  - group\s*by|aggregation|aggregate\s+function
+  - order\s*by|sorting
+  - limit|offset|top\s*n
+  - window\s+function|over\s*\(|rows?\s+between
+  - projection|materialized\s+view|dictionary
+  - mutation|alter|update|delete|optimize\b|ttl
+
+Performance & Resource:
+  - threads?|thread\s*pool|background.*pool
+  - max_.*(rows|bytes|elements|memory|partitions?|parts?|thread|concurrent|execution|block|size)
+  - memory_|\bmemory\b|overcommit
+  - parallel|pipeline|vectori[sz]ed|jit|llvm
+  - timeout|max_.*time
+  - read\s*ahead|prefetch
+  - ^async_insert
+
+# Put Formats before Networking so format-related settings win over protocol mentions in links
+Formats:
+  - format\b|csv|tsv|json|parquet|orc|arrow|protobuf|capnproto|native|regexp
 
 Networking:
-  - http
-  - tcp
-  - connect
-  - timeout
+  - ^http_|_http_|\bhttp\b(?!s?://)
+  - \btcp\b
+  - \bgrpc\b
+  - \bmysql\b
+  - \bpsql\b|\bpostgres\b
+  - \bodbc\b
+  - connect|connection|keep\s*alive|dns|hostname
+  - receive|send|socket|port|listen
 
-Security:
-  - authentication
-  - ssl
-  - secure
-  - password
+Security & Access:
+  - authentication|authorization|access\s+control|rbac
+  - password|salt|bcrypt|sha|hash\s*password
+  - ssl|tls|secure|certificate|x509
+  - kerberos|ldap|oauth|sasl
+  - quota|user|role|grant|row\s*policy
+
+Observability:
+  - log|trace|profile|stack\s*trace
+  - metrics|prometheus|telemetry|opentelemetry|jaeger|span
+  - verbose|debug\s+log
+
+Query Cache & Caches:
+  - query_cache|mark_cache|uncompressed_cache|compiled_expression_cache|schema\s*cache
+
+Experimental Features:
+  - ^allow_experimental_
+  - experimental\b
+  - analyzer|window_view|live_view|object_type|variant_type|delta_kernel|vector_similarity_index
+
+Compatibility & Semantics:
+  - ^allow_deprecated_
+  - ^allow_
+  - deprecated\b
+  - asterisk_include_
+  - allow_nonconst_timezone_arguments
+  - allow_custom_error_code_in_throwif
+  - cast_.*default_on_conversion_error|_on_conversion_error
+  - cast_keep_nullable
+  - check_.*_dependencies
+  - named\s*collection
+
+Backup & Restore:
+  - backup|restore|fault_injection
 
 Unsorted:
   - .*
