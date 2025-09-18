@@ -33,6 +33,12 @@
               <div id="tierGroup" class="checkgroup"></div>
             </div>
           </div>
+          <div class="row section">
+            <div class="group">
+              <div class="group-label emph">Special</div>
+              <div id="specialGroup" class="checkgroup"></div>
+            </div>
+          </div>
           <div class="row">
             <div class="group">
               <div class="group-label">Version</div>
@@ -41,9 +47,6 @@
                 <span id="wipBadge" class="wip-badge" title="Work in progress — experimental UI">🧪 WIP</span>
               </div>
             </div>
-            <label class="checkbox">
-              <input id="cloudOnly" type="checkbox" /> Cloud-only
-            </label>
             <label class="checkbox">
               <input id="changedOnly" type="checkbox" /> Changed in selected version
             </label>
@@ -57,6 +60,7 @@
         </div>
       </div>
       <div class="help-panel">
+        <div class="help-docs"><a href="https://clickhouse.com/docs/operations/settings" target="_blank" rel="noopener noreferrer">Official ClickHouse Settings docs</a></div>
         <details id="helpDetails" open>
           <summary>Usage</summary>
           <ul>
@@ -68,6 +72,7 @@
             <li>Changed: shows settings with default changed vs previous version.</li>
             <li>Cloud‑only: settings specific to ClickHouse Cloud.</li>
           </ul>
+          <div class="help-foot"><a href="https://github.com/dmkskd/clickhouse-settings-browser/issues" target="_blank" rel="noopener noreferrer">Issues & requests</a></div>
         </details>
       </div>
     </div>

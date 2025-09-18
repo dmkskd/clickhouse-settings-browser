@@ -6,7 +6,7 @@
   --card: #171a21;
   --chip: #2a2f3a;
   --accent: #7aa2f7;
-  --label-col: 120px; /* align value starts across rows */
+  --label-col: 90px; /* align value starts across rows, tighter */
   --border: #2a2f3a;
 }
 
@@ -27,7 +27,7 @@ main { padding: 20px; }
 
 header { padding: 16px 20px; border-bottom: 1px solid #222836; position: sticky; top: 0; background: var(--bg); z-index: 1; }
 h1 { margin: 0 0 10px; font-size: 20px; }
-.topbar { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); align-items: start; gap: 16px; }
+.topbar { display: grid; grid-template-columns: minmax(0, 3fr) minmax(220px, 1fr); align-items: start; gap: 16px; }
 .topbar > * { min-width: 0; }
 .leftcol { display: flex; flex-direction: column; gap: 12px; }
 .title-version { color: var(--muted); font-weight: normal; margin-left: 8px; font-size: 14px; }
@@ -55,6 +55,8 @@ select:focus, input[type="search"]:focus { border-color: var(--accent); }
 .tooltip .meta { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
 .tooltip .ex { color: var(--fg); font-size: 12px; }
 .tooltip .hint { color: var(--muted); font-size: 11px; margin-top: 6px; }
+.tooltip a { color: var(--accent); text-decoration: none; font-weight: 600; }
+.tooltip a:hover { text-decoration: underline; }
 
 /* Topic-colored tooltip borders (reuse topic palette) */
 .tooltip.topic.tc-0 { border-color: #7aa2f7; }
@@ -67,11 +69,16 @@ select:focus, input[type="search"]:focus { border-color: var(--accent); }
 .group-actions { display: inline-flex; gap: 6px; margin-top: 6px; }
 .mini { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--fg); cursor: pointer; }
 .mini:hover { border-color: var(--accent); }
-.help-panel { background: var(--card); border: 1px solid var(--border); padding: 10px 12px; border-radius: 10px; max-width: 520px; color: var(--muted); font-size: 12px; width: 100%; max-height: 280px; overflow: auto; overflow-wrap: anywhere; }
+.help-panel { background: var(--card); border: 1px solid var(--border); padding: 10px 12px; border-radius: 10px; max-width: 360px; color: var(--muted); font-size: 12px; width: 100%; max-height: 280px; overflow: auto; overflow-wrap: anywhere; }
 .help-panel details { margin: 0; }
 .help-panel summary { cursor: pointer; color: var(--fg); font-weight: 600; }
 .help-panel ul { margin: 8px 0 0 0; padding-left: 16px; }
 .help-panel li { line-height: 1.35; margin: 2px 0; }
+.help-docs { margin: 0 0 10px 0; }
+.help-docs a { text-decoration: none; font-weight: 600; }
+[data-theme="dark"] .help-docs a { color: #9ec3ff; }
+[data-theme="light"] .help-docs a { color: var(--accent); }
+.help-docs a:hover { text-decoration: underline; }
 .wip-badge { display: inline-block; margin-left: 8px; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #2a2335; border: 1px solid #3a2f4d; color: #ceb6ff; vertical-align: middle; }
 .theme-toggle { margin-left: 8px; border: 1px solid var(--border, #2a2f3a); background: var(--card); color: var(--fg); border-radius: 999px; padding: 2px 8px; cursor: pointer; }
 .theme-toggle:hover { border-color: var(--accent); }
@@ -175,3 +182,5 @@ summary { cursor: pointer; color: var(--accent); }
 .reason { display: inline-block; margin-left: 4px; padding: 1px 6px; border-radius: 999px; background: var(--chip); border: 1px solid var(--border); color: var(--muted); font-size: 10px; vertical-align: middle; }
 .reason { cursor: help; }
 .mention { margin: 4px 0; color: var(--muted); }
+.mention a { color: var(--accent); font-weight: 600; text-decoration: none; }
+.mention a:hover { text-decoration: underline; }

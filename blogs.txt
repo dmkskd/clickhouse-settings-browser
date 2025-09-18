@@ -1,0 +1,72 @@
+# Supercharge large data loads (part 1): insert batching/blocks/parallelism
+https://clickhouse.com/blog/supercharge-your-clickhouse-data-loads-part1
+# Supercharge large data loads (part 2): tuning for 3× faster multi‑billion row inserts
+https://clickhouse.com/blog/supercharge-your-clickhouse-data-loads-part2
+# Supercharge large data loads (part 3): resilient bulk loading & ClickPipes/ClickLoad
+https://clickhouse.com/blog/supercharge-your-clickhouse-data-loads-part3
+# Asynchronous inserts: enable/behavior/settings (async_insert, wait_for_async_insert, etc.)
+https://clickhouse.com/blog/asynchronous-data-inserts-in-clickhouse
+# Monitoring async inserts: queries & troubleshooting your insert configuration
+https://clickhouse.com/blog/monitoring-asynchronous-data-inserts-in-clickhouse
+# Input format matchup: pick fastest ingestion formats, batching, compression
+https://clickhouse.com/blog/clickhouse-input-format-matchup-which-is-fastest-most-efficient
+# Query optimization (part 1): tooling, primary keys, basic tuning
+https://clickhouse.com/blog/a-simple-guide-to-clickhouse-query-optimization-part-1
+# Projections & primary indexes: faster queries via projections/index choices
+https://clickhouse.com/blog/clickhouse-faster-queries-with-projections-and-primary-indexes
+# Lazy materialization: defer column reads; setting query_plan_optimize_lazy_materialization
+https://clickhouse.com/blog/clickhouse-gets-lazier-and-faster-introducing-lazy-materialization
+# Query condition cache: skip non-matching granules across repeated filters
+https://clickhouse.com/blog/introducing-the-clickhouse-query-condition-cache
+# Join algorithms: how to choose the right JOIN strategy & related settings
+https://clickhouse.com/blog/clickhouse-fully-supports-joins-how-to-choose-the-right-algorithm-part5
+# Postgres→ClickHouse tips V2: CDC modeling, refreshable MVs, JOIN tuning
+https://clickhouse.com/blog/postgres-to-clickhouse-data-modeling-tips-v2
+# Distributed cache for S3: architecture & knobs for hot/cold data paths
+https://clickhouse.com/blog/building-a-distributed-cache-for-s3
+# Mechanics of COUNT aggregations: performance considerations & schema/indexing
+https://clickhouse.com/blog/clickhouse_vs_elasticsearch_mechanics_of_count_aggregations
+# Advanced monitoring dashboards: enable metric logs, troubleshoot cluster
+https://clickhouse.com/blog/common-issues-you-can-solve-using-advanced-monitoring-dashboards
+# Market data app: batching strategies, sync vs async inserts
+https://clickhouse.com/blog/build-a-real-time-market-data-app-with-clickhouse-and-polygonio
+# Join me if you can (part 2): accelerate joins with dictionaries/in‑memory lookups
+https://clickhouse.com/blog/join-me-if-you-can-clickhouse-vs-databricks-snowflake-part-2
+# Parquet deep dive: external table performance & tuning considerations
+https://clickhouse.com/blog/clickhouse-and-parquet-a-foundation-for-fast-lakehouse-analytics
+# Getting started pitfalls: ORDER BY, mutations, JOIN memory & other settings
+https://clickhouse.com/blog/common-getting-started-issues-with-clickhouse
+# Release 25.8 — monthly release with new features/perf/bug fixes
+https://clickhouse.com/blog/clickhouse-release-25-08
+# Release 25.7 — monthly release; lightweight updates, AI-powered SQL, JOIN work
+https://clickhouse.com/blog/clickhouse-release-25-07
+# Release 25.6 — monthly release; projections, JSON in Parquet, snapshots
+https://clickhouse.com/blog/clickhouse-release-25-06
+# Release 25.5 — monthly release; vector similarity index (beta), Hive HMS
+https://clickhouse.com/blog/clickhouse-release-25-05
+# Release 25.4 — monthly release; lazy materialization, Iceberg time travel
+https://clickhouse.com/blog/clickhouse-release-25-04
+# Release 25.3 (LTS) — monthly release; query condition cache, catalogs
+https://clickhouse.com/blog/clickhouse-release-25-03
+# Release 25.2 — monthly release; parallel hash join improvements, Parquet bloom filters
+https://clickhouse.com/blog/clickhouse-release-25-02
+# Release 25.1 — monthly release; two‑level hash map joins, MinMax indices
+https://clickhouse.com/blog/clickhouse-release-25-01
+# Release 24.12 — monthly release; Enum usability, REST catalog, join reordering
+https://clickhouse.com/blog/clickhouse-release-24-12
+# Release 24.11 — monthly release; parallel hash join default, marks cache pre‑warm
+https://clickhouse.com/blog/clickhouse-release-24-11
+# Release 24.10 — monthly release; clickhouse-local modes, refreshable MVs GA
+https://clickhouse.com/blog/clickhouse-release-24-10
+# Release 24.9 — monthly release; APPEND for refreshable MVs, JSON funcs
+https://clickhouse.com/blog/clickhouse-release-24-09
+# Release 24.8 (LTS) — monthly release; long‑term support release
+https://clickhouse.com/blog/clickhouse-release-24-08
+# Release 24.7 — monthly release; optimize_read_in_order buffering, join caching
+https://clickhouse.com/blog/clickhouse-release-24-07
+# Release 24.5 — monthly release; features/optimizations/bug fixes
+https://clickhouse.com/blog/clickhouse-release-24-05
+# Release 24.4 — monthly release; features/optimizations/bug fixes
+https://clickhouse.com/blog/clickhouse-release-24-04
+# Release 24.2 — monthly release; vectorized distance funcs, async insert notes
+https://clickhouse.com/blog/clickhouse-release-24-02

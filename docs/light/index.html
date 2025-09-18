@@ -12,31 +12,25 @@
       <div class="leftcol">
         <h1>ClickHouse Settings Browser <span id="titleVersion" class="title-version"></span><button id="themeToggle" class="theme-toggle" title="Toggle light/dark">🌙</button></h1>
         <div class="controls">
-      <div class="row">
-        <div class="group">
-          <div class="group-label emph">Scope</div>
-          <div id="scopeGroup" class="checkgroup"></div>
-        </div>
-      </div>
-      <div class="row section">
-        <div class="group">
-          <div class="group-label emph">Topic</div>
-          <div>
-            <div id="topicGroup" class="checkgroup"></div>
-            <div class="group-actions"><button id="topicAll" class="mini" title="Select all topics">All</button><button id="topicNone" class="mini" title="Clear all topics">None</button></div>
-          </div>
-        </div>
-      </div>
-          <div class="row section">
+          <div class="row">
             <div class="group">
-              <div class="group-label emph">Tier</div>
-              <div id="tierGroup" class="checkgroup"></div>
+              <div class="group-label">Scope</div>
+              <div id="scopeGroup" class="checkgroup"></div>
             </div>
           </div>
-          <div class="row section">
+          <div class="row">
             <div class="group">
-              <div class="group-label emph">Special</div>
-              <div id="specialGroup" class="checkgroup"></div>
+              <div class="group-label">Category</div>
+              <div>
+                <div id="categoryGroup" class="checkgroup"></div>
+                <div class="group-actions"><button id="catAll" class="mini" title="Select all categories">All</button><button id="catNone" class="mini" title="Clear all categories">None</button></div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="group">
+              <div class="group-label">Tier</div>
+              <div id="tierGroup" class="checkgroup"></div>
             </div>
           </div>
           <div class="row">
@@ -47,6 +41,9 @@
                 <span id="wipBadge" class="wip-badge" title="Work in progress — experimental UI">🧪 WIP</span>
               </div>
             </div>
+            <label class="checkbox">
+              <input id="cloudOnly" type="checkbox" /> Cloud-only
+            </label>
             <label class="checkbox">
               <input id="changedOnly" type="checkbox" /> Changed in selected version
             </label>
@@ -60,19 +57,17 @@
         </div>
       </div>
       <div class="help-panel">
-        <div class="help-docs"><a href="https://clickhouse.com/docs/operations/settings" target="_blank" rel="noopener noreferrer">Official ClickHouse Settings docs</a></div>
         <details id="helpDetails" open>
           <summary>Usage</summary>
           <ul>
             <li>Filters are multi‑select. Click to toggle.</li>
             <li>Solo a value: Alt/⌥, Cmd/⌘, or Shift‑click.</li>
-            <li>Topic has All / None for bulk select.</li>
+            <li>Category has All / None for bulk select.</li>
             <li>Tier meanings: <a href="https://clickhouse.com/docs/beta-and-experimental-features" target="_blank" rel="noopener noreferrer">Beta & Experimental</a>.</li>
             <li>Docs: 🔗 next to each setting name.</li>
             <li>Changed: shows settings with default changed vs previous version.</li>
             <li>Cloud‑only: settings specific to ClickHouse Cloud.</li>
           </ul>
-          <div class="help-foot"><a href="https://github.com/dmkskd/clickhouse-settings-browser/issues" target="_blank" rel="noopener noreferrer">Issues & requests</a></div>
         </details>
       </div>
     </div>

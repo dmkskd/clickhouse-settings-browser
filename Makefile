@@ -83,6 +83,10 @@ promote-ui: ## Copy index.html/app.js/style.css to docs/ and docs/beta without t
 enrich: ## Enrich OUT=settings.json with related edges and docs mentions (DOCS=clickhouse-docs)
 	python3 enrich_settings.py --in $(OUT) --out $(OUT) --docs $(DOCS)
 
+enrich-blogs: ## Enrich OUT=settings.json using blog/release URLs (URLS=blog_urls.txt)
+	@if [ -z "$(URLS)" ]; then echo "Set URLS=path/to/urls.txt"; exit 1; fi
+	python3 enrich_settings.py --in $(OUT) --out $(OUT) --blog-urls $(URLS)
+
 serve-site: ## Serve $(SITE_DIR)/ at http://localhost:8000/
 	python3 -m http.server -d $(SITE_DIR)
 

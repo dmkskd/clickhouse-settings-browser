@@ -36,11 +36,21 @@ Steps
 3) Reload the UI. Rows show:
    - Colored Topic chips as before
    - A “Related” line with quick links + reason badges
-   - An “Insights” section (expand) with docs snippets when available
+   - An “Insights” section (expand) with docs + blog snippets when available
 
 Notes
 - Enrichment is offline (no blog fetch). Phase 2 can add blog co-mentions if needed.
 - To regenerate site data without copying UI assets, use `make site-data-only`.
+
+Online enrichment (ClickHouse blog / release posts)
+- You can augment enrichment with co-mentions from clickhouse.com/blog release posts and articles.
+- Prepare a URLs file (one per line), e.g. `blog_urls.txt`, containing only clickhouse.com links (release posts or blogs).
+- Run:
+  - `make enrich-blogs OUT=settings.json URLS=blog_urls.txt`
+- The script fetches each URL, extracts text, finds settings co-mentioned in the same paragraph, and adds:
+  - mentions.blogs: `{ url, title, excerpt }`
+  - related edges with reason `blog_comention` (merged into the existing Related list)
+- The UI shows blog snippets under “Insights” and reasons in the Related badges.
 
 Extractor features
 - Parses session settings from `src/Core/Settings.cpp` (COMMON_SETTINGS)

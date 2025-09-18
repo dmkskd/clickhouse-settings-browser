@@ -147,6 +147,13 @@ window.SettingsApp = (() => {
     ];
     buildToggleGroup(els.tierGroup, tiers, getSelectedSet(els.tierGroup) || new Set(tiers.map(t => t.value)));
     applyGroupTooltips();
+    // Build special toggles
+    if (els.specialGroup) {
+      buildToggleGroup(els.specialGroup, [
+        { value: 'cloud', label: 'Cloud-only' },
+        { value: 'refs', label: 'Blog / Release Notes' },
+      ], getSelectedSet(els.specialGroup) || new Set());
+    }
     try { updateFacetCounts(); } catch (e) { dlog('updateFacetCounts error', e); }
   }
 
@@ -156,9 +163,9 @@ window.SettingsApp = (() => {
     const selectedTopics = new Set(getSelectedValues(els.topicGroup || { querySelectorAll: () => [] }));
     const q = els.searchInput.value.trim().toLowerCase();
     const selectedTiers = new Set(getSelectedValues(els.tierGroup));
+    const specialSel = new Set(getSelectedValues(els.specialGroup || { querySelectorAll: () => [] }));
     const allTopicCount = (els.topicGroup && els.topicGroup.querySelectorAll) ? els.topicGroup.querySelectorAll('.toggle').length : 0;
     const applyTopicFilter = selectedTopics.size > 0 && selectedTopics.size < allTopicCount;
-    const cloudOnly = els.cloudOnly.checked;
     const changedOnly = els.changedOnly.checked;
 
     const items = combinedDataset(scopes).filter(s => {
@@ -169,7 +176,7 @@ window.SettingsApp = (() => {
         const ok = selectedTopics.has(cat) || subs.some(x => selectedTopics.has(x));
         if (!ok) return false;
       }
-      if (cloudOnly && !s.cloud_only) return false;
+      // Cloud-only handled via Special pills
       // Filter by version presence
       if (!s.versions || !s.versions[version]) return false;
       // Filter by tier for selected version
@@ -178,6 +185,12 @@ window.SettingsApp = (() => {
       if (selectedTiers.size && !selectedTiers.has(stier)) return false;
       // Topic filter already applied above
       if (changedOnly && !vinfo?.changed_from_prev) return false;
+      if (specialSel.has('cloud') && !s.cloud_only) return false;
+      if (specialSel.has('refs')) {
+        const md = s.mentions && (Array.isArray(s.mentions.docs) ? s.mentions.docs.length : 0);
+        const mb = s.mentions && (Array.isArray(s.mentions.blogs) ? s.mentions.blogs.length : 0);
+        if (!md && !mb) return false;
+      }
       if (!q) return true;
       return (s._hayLower || '').includes(q);
     });
@@ -190,7 +203,11 @@ window.SettingsApp = (() => {
     const scopeNames = scopes.map(s => s === 'mergetree' ? 'MergeTree' : (s === 'format' ? 'Formats' : 'Session'));
     const scopeLabel = scopeNames.length ? ` — Scopes: ${scopeNames.join(', ')}` : '';
     const topicsLabel = applyTopicFilter ? ` — Topics: ${Array.from(selectedTopics).slice(0,3).join(', ')}${selectedTopics.size>3?'…':''}` : '';
-    els.stats.textContent = `${items.length} settings — ${version}` + scopeLabel + topicsLabel + tierLabel + (cloudOnly ? ' — Cloud-only' : '') + changedLabel;
+    const specialBadges = [];
+    if (specialSel.has('cloud')) specialBadges.push('Cloud-only');
+    if (specialSel.has('refs')) specialBadges.push('Blogs/Release Notes');
+    const specialLabel = specialBadges.length ? ` — ${specialBadges.join(' + ')}` : '';
+    els.stats.textContent = `${items.length} settings — ${version}` + scopeLabel + topicsLabel + tierLabel + specialLabel + changedLabel;
 
     // Subsystem map removed to reduce clutter
 
@@ -248,6 +265,8 @@ window.SettingsApp = (() => {
           more.setAttribute('title', csv);
         }
       } catch {}
+      // Expand details sections by default (Description, Version history)
+      try { row.querySelectorAll('.body details').forEach(d => { d.open = true; }); } catch {}
       // Append enriched Related and Insights blocks if available
       try {
         const body = row.querySelector('.body');
@@ -279,12 +298,14 @@ window.SettingsApp = (() => {
           });
           body.appendChild(wrap);
         }
-        if (s.mentions && Array.isArray(s.mentions.docs) && s.mentions.docs.length) {
+        if (s.mentions && (Array.isArray(s.mentions.docs) || Array.isArray(s.mentions.blogs))) {
           const det = document.createElement('details');
           const sum = document.createElement('summary');
-          sum.textContent = 'Insights';
+          sum.textContent = 'Blogs & Release Notes';
           det.appendChild(sum);
-          s.mentions.docs.slice(0,2).forEach(m => {
+          const docsList = Array.isArray(s.mentions.docs) ? s.mentions.docs.slice(0,2) : [];
+          const blogList = Array.isArray(s.mentions.blogs) ? s.mentions.blogs.slice(0,2) : [];
+          docsList.forEach(m => {
             const div = document.createElement('div');
             div.className = 'mention';
             const link = document.createElement('a');
@@ -297,14 +318,28 @@ window.SettingsApp = (() => {
             div.appendChild(txt);
             det.appendChild(div);
           });
-          body.appendChild(det);
+          blogList.forEach(m => {
+            const div = document.createElement('div');
+            div.className = 'mention';
+            const link = document.createElement('a');
+            link.href = m.url || '#';
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = (m.title || 'Blog');
+            div.appendChild(link);
+            det.appendChild(div);
+          });
+          // Expand by default and ensure this section appears before the Related block
+          det.open = true;
+          const relNode = body.querySelector('.related');
+          if (relNode) body.insertBefore(det, relNode); else body.appendChild(det);
         }
       } catch {}
       frag.appendChild(row);
     });
     els.list.innerHTML = '';
     els.list.appendChild(frag);
-    try { attachSubsysChipTooltips(); } catch {}
+      try { attachSubsysChipTooltips(); } catch {}
     try { attachSubsysChipTooltips(); } catch {}
     // Remember current state for next control rebuild
     try {
@@ -362,8 +397,12 @@ window.SettingsApp = (() => {
     els.tierGroup.addEventListener('change', renderList);
     const debounced = debounce(renderList, 200);
     els.searchInput.addEventListener('input', debounced);
-    els.cloudOnly.addEventListener('change', renderList);
-    els.changedOnly.addEventListener('change', renderList);
+    if (els.cloudOnly) els.cloudOnly.addEventListener('change', renderList);
+    if (els.changedOnly) els.changedOnly.addEventListener('change', renderList);
+    const sg = el('specialGroup');
+    if (sg) sg.addEventListener('change', renderList);
+    const refs = el('referencesOnly');
+    if (refs) refs.addEventListener('change', renderList);
   }
 
   async function loadData() {
@@ -409,6 +448,7 @@ window.SettingsApp = (() => {
     els.stats = el('stats');
     els.cloudOnly = el('cloudOnly');
     els.changedOnly = el('changedOnly');
+    els.specialGroup = el('specialGroup');
 
     // Theme setup
     applySavedTheme();
@@ -494,12 +534,17 @@ window.SettingsApp = (() => {
   function applyGroupTooltips() {
     // Attach rich tooltips to pills (Scope, Topic, Tier)
     attachPillTooltips(els.scopeGroup, (btn) => {
-      const v = btn.dataset.value;
+      const v = (btn.dataset.value || '').toLowerCase();
       const desc = v === 'session' ? 'Session/query settings (system.settings)'
         : v === 'mergetree' ? 'MergeTree storage settings (table-level)'
         : v === 'format' ? 'Input/Output format settings'
         : '';
-      return { title: `Scope: ${btn.textContent}`, meta: desc };
+      const href = v === 'session' ? 'https://clickhouse.com/docs/operations/settings/settings'
+        : v === 'mergetree' ? 'https://clickhouse.com/docs/operations/settings/merge-tree-settings'
+        : v === 'format' ? 'https://clickhouse.com/docs/operations/settings/formats'
+        : '';
+      const link = href ? { href, label: 'Open docs' } : null;
+      return { title: `Scope: ${btn.textContent}`, meta: desc, link };
     });
     attachPillTooltips(els.topicGroup, (btn) => {
       const name = btn.dataset.value;
@@ -566,9 +611,10 @@ window.SettingsApp = (() => {
       try {
         const info = builder(btn) || {};
         const metaLine = info.meta ? `<div class=\"meta\">${info.meta}</div>` : '';
+        const linkLine = (info.link && info.link.href) ? `<div class=\"meta\"><a href=\"${info.link.href}\" target=\"_blank\" rel=\"noopener noreferrer\">${info.link.label || 'Open docs'}</a></div>` : '';
         const exLine = info.examples ? `<div class=\"ex\">Examples: ${info.examples}</div>` : '';
         const hint = `<div class=\"hint\">Alt/⌥ or Cmd/⌘ or Shift-click: only this — Esc to close</div>`;
-        const html = `<div class=\"h\">${info.title || ''}</div>${metaLine}${exLine}${hint}`;
+        const html = `<div class=\"h\">${info.title || ''}</div>${metaLine}${linkLine}${exLine}${hint}`;
         showTooltipNear(btn, html, info.classes || []);
       } catch {}
       tooltipShowTimer = null;
@@ -581,7 +627,6 @@ window.SettingsApp = (() => {
     if (!container) return;
     const pills = Array.from(container.querySelectorAll('.toggle'));
     pills.forEach(btn => {
-      // Remove native tooltip to avoid overlap
       if (btn.hasAttribute('title')) btn.removeAttribute('title');
       btn.addEventListener('mouseenter', () => { cancelHideTooltip(); scheduleShowTooltip(btn, builder, 100); });
       btn.addEventListener('mouseleave', () => { cancelShowTooltip(); scheduleHideTooltip(250); });
@@ -620,7 +665,7 @@ window.SettingsApp = (() => {
   // Facet counts on selectors (scope, topics, tier)
   function passFilters(s, opts = {}) {
     const version = els.versionSelect.value;
-    const cloudOnly = els.cloudOnly.checked;
+    const cloudOnly = false; // cloud-only filtering handled via Special pills
     const changedOnly = els.changedOnly.checked;
     const q = els.searchInput.value.trim().toLowerCase();
     const selectedTiers = new Set(getSelectedValues(els.tierGroup));
@@ -634,7 +679,7 @@ window.SettingsApp = (() => {
     const vinfo = s.versions[version];
     const stier = vinfo?.tier || parseTierFromFlags(s.flags) || 'production';
 
-    if (cloudOnly && !s.cloud_only) return false;
+    // cloudOnly handled via Special pills
     if (!opts.ignoreTier && selectedTiers.size && !selectedTiers.has(stier)) return false;
     if (!opts.ignoreTopics && applyTopicFilter) {
       const cat = s.category || 'Uncategorized';
@@ -744,6 +789,7 @@ window.SettingsApp = (() => {
       { value: 'beta', label: 'Beta', count: tierCount.beta||0 },
       { value: 'experimental', label: 'Experimental', count: tierCount.experimental||0 },
     ], tierSel);
+    // Special pills: do not recompute with counts here; keep selection from renderControls
     applyGroupTooltips();
   }
 

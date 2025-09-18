@@ -200,11 +200,91 @@ def merge_related(*rels: Dict[str, List[Tuple[str, float, List[str]]]], limit: i
     return out
 
 
+def fetch_url(url: str, timeout: int = 15) -> str:
+    import urllib.request
+    req = urllib.request.Request(url, headers={'User-Agent': 'SettingsEnrich/1.0'})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        data = resp.read()
+    try:
+        return data.decode('utf-8', errors='ignore')
+    except Exception:
+        return data.decode('latin-1', errors='ignore')
+
+
+def strip_html(html: str) -> Tuple[str, str]:
+    """Return (title, text) naive HTML to text extraction.
+    Removes scripts/styles, pulls <title>, collapses whitespace.
+    """
+    # remove scripts/styles
+    html = re.sub(r"<script[\s\S]*?</script>", " ", html, flags=re.IGNORECASE)
+    html = re.sub(r"<style[\s\S]*?</style>", " ", html, flags=re.IGNORECASE)
+    # title
+    m = re.search(r"<title>(.*?)</title>", html, flags=re.IGNORECASE|re.DOTALL)
+    title = re.sub(r"\s+", " ", m.group(1)).strip() if m else ''
+    # tags to newlines
+    text = re.sub(r"<\s*br\s*/?\s*>", "\n", html, flags=re.IGNORECASE)
+    text = re.sub(r"</p>|</div>|</h[1-6]>|</li>", "\n\n", text, flags=re.IGNORECASE)
+    # strip tags
+    text = re.sub(r"<[^>]+>", " ", text)
+    # collapse whitespace
+    text = re.sub(r"\s+", " ", text)
+    # rebuild paragraphs roughly
+    text = re.sub(r"\n\s*\n\s*\n+", "\n\n", text)
+    return title, text
+
+
+def parse_online_mentions(urls: List[str], names: Set[str]) -> Tuple[Dict[str, List[Dict]], Dict[str, List[Tuple[str, float, List[str]]]]]:
+    mentions: Dict[str, List[Dict]] = defaultdict(list)
+    co: Dict[str, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    for url in urls:
+        if not url.startswith('http'):  # skip bad lines
+            continue
+        # Restrict to clickhouse.com/blog or release notes on clickhouse.com
+        if not (url.startswith('https://clickhouse.com/blog/') or url.startswith('https://clickhouse.com/blog') or url.startswith('https://clickhouse.com/')):
+            continue
+        try:
+            html = fetch_url(url)
+        except Exception as e:
+            print(f"WARN: fetch failed for {url}: {e}", file=sys.stderr)
+            continue
+        title, text = strip_html(html)
+        # split into pseudo paragraphs by periods or newlines (rough)
+        paras = re.split(r"\n\n|(?<=\.)\s{2,}", text)
+        name_re = re.compile(r"`([a-z0-9_]+)`|\b([a-z0-9_]{3,})\b", re.IGNORECASE)
+        def add_mention(nm: str, excerpt: str):
+            item = { 'url': url, 'title': title, 'excerpt': excerpt.strip()[:220] + ('…' if len(excerpt.strip())>220 else '') }
+            lst = mentions[nm]
+            if all(x.get('url') != url or x.get('excerpt') != item['excerpt'] for x in lst):
+                lst.append(item)
+        for para in paras:
+            found: Set[str] = set()
+            for m in name_re.finditer(para.lower()):
+                nm = (m.group(1) or m.group(2) or '').lower()
+                if nm in names:
+                    found.add(nm)
+            if not found:
+                continue
+            for nm in found:
+                add_mention(nm, para)
+            if len(found) >= 2:
+                for a in found:
+                    for b in found:
+                        if a == b: continue
+                        co[a][b] += 0.5
+    co_out: Dict[str, List[Tuple[str, float, List[str]]]] = {}
+    for a, mp in co.items():
+        lst = [(b, score, ['blog_comention']) for b, score in mp.items()]
+        lst.sort(key=lambda x: x[1], reverse=True)
+        co_out[a] = lst[:6]
+    return mentions, co_out
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description='Enrich settings.json with related edges and docs mentions')
     ap.add_argument('--in', dest='in_path', default='settings.json', help='Input settings.json')
     ap.add_argument('--out', dest='out_path', default='settings.json', help='Output settings.json (in-place by default)')
     ap.add_argument('--docs', dest='docs_root', default='clickhouse-docs', help='Path to clickhouse-docs repo (optional)')
+    ap.add_argument('--blog-urls', dest='blog_urls', help='Path to a file with blog/release note URLs (one per line; clickhouse.com only)')
     args = ap.parse_args()
 
     data = load_json(args.in_path)
@@ -235,8 +315,21 @@ def main() -> None:
         except Exception as e:
             print(f"WARN: docs parsing failed: {e}", file=sys.stderr)
 
+    # Blog / online mentions (optional)
+    rel_blogs: Dict[str, List[Tuple[str, float, List[str]]]] = {}
+    blog_mentions: Dict[str, List[Dict]] = {}
+    blog_urls_total = 0
+    if args.blog_urls and os.path.exists(args.blog_urls):
+        try:
+            urls = [ln.strip() for ln in open(args.blog_urls, 'r', encoding='utf-8') if ln.strip() and not ln.strip().startswith('#')]
+            blog_urls_total = len(urls)
+            names_set = set(by_name.keys())
+            blog_mentions, rel_blogs = parse_online_mentions(urls, names_set)
+        except Exception as e:
+            print(f"WARN: blog parsing failed: {e}", file=sys.stderr)
+
     # Merge relations with weights
-    merged = merge_related(rel_tokens, rel_cochange, rel_docs, limit=8)
+    merged = merge_related(rel_tokens, rel_cochange, rel_docs, rel_blogs, limit=8)
 
     # Attach to each node
     for s in all_nodes:
@@ -245,13 +338,32 @@ def main() -> None:
             s['related'] = merged[name]
         if mentions.get(name):
             s.setdefault('mentions', {})['docs'] = mentions[name]
+        if blog_mentions.get(name):
+            s.setdefault('mentions', {})['blogs'] = blog_mentions[name]
 
     # Mark metadata
     data['enriched'] = True
     save_json(args.out_path, data)
-    print(f"Enriched {args.out_path}: {len(all_nodes)} settings, related edges added; docs mentions: {sum(len(v) for v in mentions.values())}")
+    # Verbose summary
+    def edge_count(m: Dict[str, List[Tuple[str, float, List[str]]]]) -> int:
+        return sum(len(v) for v in m.values())
+    token_edges = edge_count(rel_tokens)
+    cochange_edges = edge_count(rel_cochange)
+    docs_edges = edge_count(rel_docs)
+    blog_edges = edge_count(rel_blogs)
+    docs_mentions_count = sum(len(v) for v in mentions.values())
+    blog_mentions_count = sum(len(v) for v in blog_mentions.values())
+    related_settings = sum(1 for s in all_nodes if s.get('related'))
+    print(
+        "\n".join([
+            f"Enriched {args.out_path}: {len(all_nodes)} settings",
+            f" - Related settings populated for: {related_settings}",
+            f" - Edge signals: tokens={token_edges}, co_changed={cochange_edges}, docs_comention={docs_edges}, blog_comention={blog_edges}",
+            f" - Mentions: docs={docs_mentions_count}, blogs={blog_mentions_count}",
+            (f" - Blog URLS processed: {blog_urls_total}" if blog_urls_total else " - Blog URLS processed: 0"),
+        ])
+    )
 
 
 if __name__ == '__main__':
     main()
-
