@@ -2,6 +2,10 @@ ClickHouse Settings Browser
 
 Simple, local viewer for ClickHouse settings across versions. It parses the ClickHouse source code to extract settings, defaults, tier (Production/Beta/Experimental), Cloud‑only flags, and version history, and renders them in a compact UI with filters.
 
+Live site
+- Stable: https://dmkskd.github.io/clickhouse-settings-browser/
+- Beta: https://dmkskd.github.io/clickhouse-settings-browser/beta/
+
 Contents
 - extract_settings.py — Python extractor (no external deps)
 - index.html, app.js, style.css — single‑page UI
