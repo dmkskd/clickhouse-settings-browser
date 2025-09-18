@@ -60,17 +60,24 @@
         </div>
       </div>
       <div class="help-panel">
-        <div class="help-docs"><a href="https://clickhouse.com/docs/operations/settings" target="_blank" rel="noopener noreferrer">Official ClickHouse Settings docs</a></div>
+        <div class="help-docs"><a class="help-link" href="https://clickhouse.com/docs/operations/settings" target="_blank" rel="noopener noreferrer">Official ClickHouse Settings docs</a></div>
+        <details id="howItWorks" open>
+          <summary>How this works</summary>
+          <ul>
+            <li>Uses the official ClickHouse source as the single source of truth to list Session, MergeTree, and Format settings, including defaults and version history.</li>
+            <li>Groups settings into Topics to aid discovery, based on meaning inferred from names and descriptions.</li>
+            <li>Suggests related settings using multiple signals: similar naming/family, min/max and rows/bytes pairs, changes in the same release, and co‑mentions in docs or official blog/release notes.</li>
+            <li>Optionally enriches rows with short snippets and links to documentation and relevant release/blog posts when available.</li>
+            <li><a class="help-link" href="README.md" target="_blank" rel="noopener noreferrer">See README for data generation details</a></li>
+          </ul>
+        </details>
         <details id="helpDetails" open>
           <summary>Usage</summary>
           <ul>
             <li>Filters are multi‑select. Click to toggle.</li>
             <li>Solo a value: Alt/⌥, Cmd/⌘, or Shift‑click.</li>
             <li>Topic has All / None for bulk select.</li>
-            <li>Tier meanings: <a href="https://clickhouse.com/docs/beta-and-experimental-features" target="_blank" rel="noopener noreferrer">Beta & Experimental</a>.</li>
             <li>Docs: 🔗 next to each setting name.</li>
-            <li>Changed: shows settings with default changed vs previous version.</li>
-            <li>Cloud‑only: settings specific to ClickHouse Cloud.</li>
           </ul>
           <div class="help-foot"><a href="https://github.com/dmkskd/clickhouse-settings-browser/issues" target="_blank" rel="noopener noreferrer">Issues & requests</a></div>
         </details>

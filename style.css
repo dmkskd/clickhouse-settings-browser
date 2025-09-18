@@ -27,7 +27,7 @@ main { padding: 20px; }
 
 header { padding: 16px 20px; border-bottom: 1px solid #222836; position: sticky; top: 0; background: var(--bg); z-index: 1; }
 h1 { margin: 0 0 10px; font-size: 20px; }
-.topbar { display: grid; grid-template-columns: minmax(0, 3fr) minmax(220px, 1fr); align-items: start; gap: 16px; }
+.topbar { display: grid; grid-template-columns: minmax(0, 3fr) minmax(220px, 1fr); align-items: stretch; gap: 16px; }
 .topbar > * { min-width: 0; }
 .leftcol { display: flex; flex-direction: column; gap: 12px; }
 .title-version { color: var(--muted); font-weight: normal; margin-left: 8px; font-size: 14px; }
@@ -69,7 +69,7 @@ select:focus, input[type="search"]:focus { border-color: var(--accent); }
 .group-actions { display: inline-flex; gap: 6px; margin-top: 6px; }
 .mini { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--fg); cursor: pointer; }
 .mini:hover { border-color: var(--accent); }
-.help-panel { background: var(--card); border: 1px solid var(--border); padding: 10px 12px; border-radius: 10px; max-width: 360px; color: var(--muted); font-size: 12px; width: 100%; max-height: 280px; overflow: auto; overflow-wrap: anywhere; }
+.help-panel { background: var(--card); border: 1px solid var(--border); padding: 10px 12px; border-radius: 10px; max-width: 360px; color: var(--muted); font-size: 12px; width: 100%; max-height: calc(100vh - 120px); overflow: auto; overflow-wrap: anywhere; }
 .help-panel details { margin: 0; }
 .help-panel summary { cursor: pointer; color: var(--fg); font-weight: 600; }
 .help-panel ul { margin: 8px 0 0 0; padding-left: 16px; }
@@ -79,6 +79,11 @@ select:focus, input[type="search"]:focus { border-color: var(--accent); }
 [data-theme="dark"] .help-docs a { color: #9ec3ff; }
 [data-theme="light"] .help-docs a { color: var(--accent); }
 .help-docs a:hover { text-decoration: underline; }
+/* Shared lighter link style for key docs links */
+.help-panel a.help-link { text-decoration: none; font-weight: 600; }
+[data-theme="dark"] .help-panel a.help-link { color: #9ec3ff; }
+[data-theme="light"] .help-panel a.help-link { color: var(--accent); }
+.help-panel a.help-link:hover { text-decoration: underline; }
 .wip-badge { display: inline-block; margin-left: 8px; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #2a2335; border: 1px solid #3a2f4d; color: #ceb6ff; vertical-align: middle; }
 .theme-toggle { margin-left: 8px; border: 1px solid var(--border, #2a2f3a); background: var(--card); color: var(--fg); border-radius: 999px; padding: 2px 8px; cursor: pointer; }
 .theme-toggle:hover { border-color: var(--accent); }
@@ -154,11 +159,16 @@ select:focus, input[type="search"]:focus { border-color: var(--accent); }
 [data-theme="light"] #tierGroup .toggle.v-experimental.selected { background: #ffe8e3; border-color: #f78c6c; }
 
 .setting { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin: 10px 0; }
+.setting.highlight { outline: 2px solid var(--accent); box-shadow: 0 0 0 3px rgba(122,162,247,0.25); }
 .setting .h { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .setting .name { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 6px; }
 .setting .name .doclink { text-decoration: none; font-size: 13px; line-height: 1; opacity: 0.8; }
 .setting .name .doclink:hover { opacity: 1; color: var(--accent); }
 .setting .meta { display: flex; gap: 6px; flex-wrap: wrap; }
+.ellipsis-link { color: var(--accent); text-decoration: none; }
+.ellipsis-link:hover { text-decoration: underline; }
+.copylink { margin-left: 6px; border: 1px solid var(--border); background: var(--card); color: var(--muted); border-radius: 999px; padding: 2px 6px; font-size: 11px; cursor: pointer; }
+.copylink:hover { border-color: var(--accent); color: var(--fg); }
 .chip { background: var(--chip); color: var(--muted); border-radius: 999px; padding: 2px 8px; font-size: 11px; border: 1px solid #2e3443; }
 .chip.beta { color: #ffd166; border-color: #3a3323; background: #2a251a; }
 .chip.experimental { color: #f78c6c; border-color: #3a2a2a; background: #2a1e1e; }

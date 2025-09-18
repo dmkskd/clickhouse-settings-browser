@@ -22,8 +22,8 @@ Quick start
    - `python3 -m http.server` and browse to `http://localhost:8000/`
    - Or open `index.html` directly in a browser.
 
-Enrichment (Related + Docs Mentions)
-- Add relationships between settings (families, co-changes, docs co-mentions) and short docs excerpts.
+Enrichment (Related + Mentions)
+- Adds relationships between settings (families, co-changes, co-mentions) and short documentation snippets.
 - Requires a generated `settings.json` and optionally a local `clickhouse-docs` clone for docs co-mentions.
 
 Steps
@@ -31,26 +31,26 @@ Steps
 2) Enrich in place (no network):
    - `make enrich OUT=settings.json DOCS=clickhouse-docs`
    - This augments each setting with:
-     - `related`: top related settings with reasons (e.g., token_overlap, min_max_pair, co_changed, docs_comention)
+     - `related`: top related settings with reasons (e.g., token_overlap, min_max_pair, co_changed, docs_comention, blog_comention)
      - `mentions.docs`: list of `{url, excerpt}` from docs pages when available
+     - `mentions.blogs`: list of `{url, title, excerpt}` from official blog / release notes when provided
 3) Reload the UI. Rows show:
    - Colored Topic chips as before
    - A “Related” line with quick links + reason badges
    - An “Insights” section (expand) with docs + blog snippets when available
 
 Notes
-- Enrichment is offline (no blog fetch). Phase 2 can add blog co-mentions if needed.
 - To regenerate site data without copying UI assets, use `make site-data-only`.
 
-Online enrichment (ClickHouse blog / release posts)
+Online enrichment (ClickHouse blog / release notes)
 - You can augment enrichment with co-mentions from clickhouse.com/blog release posts and articles.
 - Prepare a URLs file (one per line), e.g. `blog_urls.txt`, containing only clickhouse.com links (release posts or blogs).
 - Run:
-  - `make enrich-blogs OUT=settings.json URLS=blog_urls.txt`
+  - `make enrich-blogs OUT=settings.json URLS=blog_urls.txt` (you can use `blogs.txt` in this repo as a starting point)
 - The script fetches each URL, extracts text, finds settings co-mentioned in the same paragraph, and adds:
   - mentions.blogs: `{ url, title, excerpt }`
   - related edges with reason `blog_comention` (merged into the existing Related list)
-- The UI shows blog snippets under “Insights” and reasons in the Related badges.
+- The UI shows blog snippets under “Blogs & Release Notes” and reasons in the Related badges.
 
 Extractor features
 - Parses session settings from `src/Core/Settings.cpp` (COMMON_SETTINGS)
@@ -63,16 +63,19 @@ Extractor features
   - `--versions`/`--versions-file`
 
 UI features
-- Scope pills: Session, MergeTree (multi‑select)
-- Category pills: configurable via `categories.yaml` (multi‑select, color coded)
-- Tier pills: Production, Beta, Experimental (multi‑select, color coded)
-- Toggles: Cloud‑only, Changed in selected version
-- Search: filters by name/description (debounced)
-- Row chips: Type, Category (color), Scope, Tier, Cloud‑only, alias, and a Docs link
+- Scope pills: Session, MergeTree, Formats (multi‑select)
+- Topic pills: unified Topics (Categories ∪ inferred subsystems), color coded (multi‑select)
+- Tier pills: Production, Beta, Experimental (multi‑select, color coded) — hover for details & link
+- Special pills: Cloud‑only and Blog / Release Notes
+- Search: filters by name/description (debounced), syncs to `?q=`; press `/` to focus
+- Deep links: each setting has a stable `#s-<name>` anchor; a ⧉ button copies a direct link
+- Row chips: Type, Topic, Scope, Tier, Cloud‑only, alias, and a Docs link
+- Help panel: link to official settings docs and a short "How this works" overview
 
 Tips
 - For GitHub Pages, you can commit a generated `settings.json`. For development, it’s fine to keep it ignored locally and regenerate as needed.
 - Update `categories.yaml` to refine grouping; first matching rule wins, unmatched go to “Uncategorized”.
+ - Development happens in the project root (index.html/app.js/style.css). The `docs/` folder is only for publishing.
 
 Make targets (optional)
 - `make generate` — from CHANGELOG (set MINORS/CHANNEL as needed)
@@ -81,8 +84,8 @@ Make targets (optional)
 
 Publishing to GitHub Pages
 - This repo is set up to publish from the `docs/` folder.
-- Build site assets and generate JSON into `docs/`:
-  - `make site` (equivalent to `make site-static` + `make generate OUT=docs/settings.json`)
+- Build site assets and generate JSON into `docs/` (latest version only by default):
+  - `make site` (equivalent to `make site-static` + `make generate OUT=docs/settings.json MINORS=1`)
 - Preview only the site folder:
   - `make serve-site` (serves from `docs/`)
 - Commit and push `docs/` so Pages can serve it.

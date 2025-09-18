@@ -112,7 +112,7 @@ window.SettingsApp = (() => {
     const settings = combinedDataset(getSelectedScopes());
     // Version select
     els.versionSelect.innerHTML = '';
-    versions.slice().reverse().forEach(v => {
+    versions.forEach(v => {
       const opt = document.createElement('option');
       opt.value = v; opt.textContent = v;
       els.versionSelect.appendChild(opt);
@@ -221,7 +221,8 @@ window.SettingsApp = (() => {
       const stier = s.versions[version]?.tier || parseTierFromFlags(s.flags) || 'production';
       const history = s.history || [];
       // Use a short snippet for description to keep rendering fast
-      const descSnippet = (s.description || '').substring(0, 240);
+      const descFull = s.description || '';
+      const descSnippet = descFull.substring(0, 240);
       const catName = s.category || 'Uncategorized';
       const catClass = 'v-' + String(catName).toLowerCase().replace(/[^a-z0-9_-]/g,'');
       const catColor = topicColorClass(catName);
@@ -234,6 +235,7 @@ window.SettingsApp = (() => {
         <div class="h">
           <div class="name">${s.name}
             ${docUrl ? `<a class="doclink" href="${docUrl}" target="_blank" rel="noopener noreferrer" aria-label="Open docs for ${s.name}" title="Open docs">🔗</a>` : ''}
+            <button class="copylink" type="button" title="Copy link to this setting" aria-label="Copy link">⧉</button>
           </div>
           <div class="meta">
             <span class="chip">${s.type}</span>
@@ -251,11 +253,36 @@ window.SettingsApp = (() => {
           <div class="default"><span class="label">Default:</span> <code>${fmtDefault(def)}</code></div>
           <details>
             <summary>Description</summary>
-            <div class="desc">${escapeHtml(descSnippet)}${s.description && s.description.length > 240 ? '…' : ''}</div>
+            <div class="desc">${escapeHtml(descSnippet)}${descFull.length > 240 ? (docUrl ? ` <a class="ellipsis-link" href="${docUrl}" target="_blank" rel="noopener noreferrer" title="Open docs for ${s.name}">…</a>` : '…') : ''}</div>
           </details>
           ${history.length ? `<details><summary>Version history</summary>${history.map(h => `<div class="history-row"><span class="tag">${h.version_minor}</span> <code>${escapeHtml(h.new_default)}</code> — ${escapeHtml(h.comment)}</div>`).join('')}</details>` : ''}
         </div>
       `;
+      // Wire copy-link button
+      try {
+        const btn = row.querySelector('.copylink');
+        if (btn) {
+          btn.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            const base = String(window.location.href).split('#')[0];
+            const url = `${base}#${row.id}`;
+            const done = () => {
+              const prev = btn.title;
+              btn.title = 'Copied!';
+              setTimeout(() => { try { btn.title = prev; } catch {} }, 1200);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(url).then(done).catch(done);
+            } else {
+              try {
+                const ta = document.createElement('textarea');
+                ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+              } catch {}
+              done();
+            }
+          });
+        }
+      } catch {}
       // Attach hidden subsystems list to "+N" chip for tooltip
       try {
         const more = row.querySelector('.chip.subsys.more');
@@ -347,6 +374,12 @@ window.SettingsApp = (() => {
       lastApplyTopicFilter = applyTopicFilter;
     } catch {}
     try { updateFacetCounts(); } catch (e) { dlog('updateFacetCounts error', e); }
+
+    // If a hash is present, try to focus the corresponding row
+    try {
+      const h = (window.location.hash || '').replace(/^#/, '');
+      if (h) focusRowById(h);
+    } catch {}
   }
 
   function renderSubsystemMap(items) {
@@ -395,7 +428,7 @@ window.SettingsApp = (() => {
     els.versionSelect.addEventListener('change', () => { updateTitleVersion(); renderList(); });
     if (els.topicGroup) els.topicGroup.addEventListener('change', renderList);
     els.tierGroup.addEventListener('change', renderList);
-    const debounced = debounce(renderList, 200);
+    const debounced = debounce(() => { updateSearchParam(els.searchInput.value); renderList(); }, 200);
     els.searchInput.addEventListener('input', debounced);
     if (els.cloudOnly) els.cloudOnly.addEventListener('change', renderList);
     if (els.changedOnly) els.changedOnly.addEventListener('change', renderList);
@@ -403,6 +436,22 @@ window.SettingsApp = (() => {
     if (sg) sg.addEventListener('change', renderList);
     const refs = el('referencesOnly');
     if (refs) refs.addEventListener('change', renderList);
+    // Focus search with '/'
+    window.addEventListener('keydown', (ev) => {
+      if (ev.key === '/' && !ev.altKey && !ev.metaKey && !ev.ctrlKey) {
+        const t = ev.target;
+        const isInput = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+        if (!isInput) {
+          ev.preventDefault();
+          try { els.searchInput.focus(); els.searchInput.select(); } catch {}
+        }
+      }
+    });
+    // React to hash navigation
+    window.addEventListener('hashchange', () => {
+      const h = (window.location.hash || '').replace(/^#/, '');
+      if (h) focusRowById(h);
+    });
   }
 
   async function loadData() {
@@ -454,6 +503,12 @@ window.SettingsApp = (() => {
     applySavedTheme();
     els.themeToggle.addEventListener('click', toggleTheme);
 
+    // Restore q from URL, if any, before loading
+    try {
+      const u = new URL(window.location.href);
+      const q = u.searchParams.get('q');
+      if (q) els.searchInput.value = q;
+    } catch {}
     await loadData();
     renderControls();
     updateTitleVersion();
@@ -557,10 +612,18 @@ window.SettingsApp = (() => {
     attachPillTooltips(els.tierGroup, (btn) => {
       const v = (btn.dataset.value || '').toLowerCase();
       const desc = v === 'production' ? 'Safe with other production features'
-        : v === 'beta' ? `Stable but interactions may be unknown — ${tierDoc}`
-        : v === 'experimental' ? `In active development — ${tierDoc}`
+        : v === 'beta' ? 'Stable but interactions may be unknown'
+        : v === 'experimental' ? 'In active development'
         : '';
-      return { title: `Tier: ${btn.textContent}`, meta: desc };
+      return { title: `Tier: ${btn.textContent}`, meta: desc, link: { href: tierDoc, label: 'About Beta & Experimental' } };
+    });
+    // Special pills: Cloud-only and Blog/Release Notes
+    attachPillTooltips(els.specialGroup, (btn) => {
+      const v = (btn.dataset.value || '').toLowerCase();
+      const desc = v === 'cloud' ? 'Settings that only take effect in ClickHouse Cloud'
+        : v === 'refs' ? 'Settings mentioned in docs or official release/blog posts'
+        : '';
+      return { title: `Special: ${btn.textContent}`, meta: desc };
     });
   }
 
@@ -831,6 +894,30 @@ window.SettingsApp = (() => {
     if (!els.titleVersion || !els.versionSelect) return;
     const v = els.versionSelect.value || '';
     els.titleVersion.textContent = v ? `— ${v}` : '';
+  }
+
+  // Highlight and scroll to a row by element id (e.g., 's-setting_name')
+  function focusRowById(id) {
+    if (!id) return false;
+    const node = document.getElementById(id);
+    if (!node) return false;
+    try { node.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch { node.scrollIntoView({ block: 'center' }); }
+    try {
+      node.classList.add('highlight');
+      setTimeout(() => { try { node.classList.remove('highlight'); } catch {} }, 1600);
+    } catch {}
+    return true;
+  }
+
+  // Sync `q` param in URL when search changes; empty removes it
+  function updateSearchParam(q) {
+    try {
+      const url = new URL(window.location.href);
+      if (q && q.trim()) url.searchParams.set('q', q);
+      else url.searchParams.delete('q');
+      const next = url.toString();
+      if (next !== window.location.href) window.history.replaceState(null, '', next);
+    } catch {}
   }
 
   function applySavedTheme() {
