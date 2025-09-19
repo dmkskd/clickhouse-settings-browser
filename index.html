@@ -39,23 +39,25 @@
               <div id="specialGroup" class="checkgroup"></div>
             </div>
           </div>
+        <div class="row">
+          <div class="group">
+            <div class="group-label">Version</div>
+            <div>
+              <select id="versionSelect"></select>
+              <span id="wipBadge" class="wip-badge" title="Work in progress — experimental UI">🧪 WIP</span>
+              <label class="checkbox disabled" title="Not active yet">
+                <input id="changedOnly" type="checkbox" disabled /> Changed in selected version
+              </label>
+            </div>
+          </div>
+        </div>
           <div class="row">
             <div class="group">
-              <div class="group-label">Version</div>
+              <div class="group-label emph">Search</div>
               <div>
-                <select id="versionSelect"></select>
-                <span id="wipBadge" class="wip-badge" title="Work in progress — experimental UI">🧪 WIP</span>
+                <input id="searchInput" type="search" class="search-input" placeholder="Filter by name or description" />
               </div>
             </div>
-            <label class="checkbox">
-              <input id="changedOnly" type="checkbox" /> Changed in selected version
-            </label>
-          </div>
-          <div class="row">
-            <label class="grow">
-              Search
-              <input id="searchInput" type="search" placeholder="Filter by name or description" />
-            </label>
           </div>
         </div>
       </div>

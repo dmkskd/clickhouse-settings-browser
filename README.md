@@ -6,6 +6,12 @@ Live site
 - Stable: https://dmkskd.github.io/clickhouse-settings-browser/
 - Beta: https://dmkskd.github.io/clickhouse-settings-browser/beta/
 
+Simple build commands
+- Latest only, with Related populated (no network): `make site-all`
+- Include Blogs & Release Notes too: `make site-all URLS=blogs.txt`
+- Include Blogs & Release Notes + docs co‑mentions: `make site-all URLS=blogs.txt DOCS=clickhouse-docs`
+- Development is in the project root (`index.html`, `app.js`, `style.css`). The `docs/` folder is only updated by `make site*` targets for publishing.
+
 Contents
 - extract_settings.py — Python extractor (no external deps)
 - index.html, app.js, style.css — single‑page UI
@@ -16,7 +22,7 @@ Quick start
    - ClickHouse repo path: `ClickHouse/` (sibling folder in this project)
    - Optional docs repo: `clickhouse-docs/` (not required)
 
-2) Generate data (latest two monthly releases via CHANGELOG):
+2) Generate data (example: latest two monthly releases via CHANGELOG):
    - `python3 extract_settings.py --repo ClickHouse --from-changelog ClickHouse/CHANGELOG.md --minors 2 --channel both --categories categories.yaml --out settings.json`
 
    Or specify tags explicitly:
@@ -91,6 +97,8 @@ Publishing to GitHub Pages
 - This repo is set up to publish from the `docs/` folder.
 - Build site assets and generate + enrich JSON into `docs/` (latest version only by default):
   - `make site` (copies UI, generates MINORS=1, and runs enrichment)
+  - Blogs & Release Notes (optional): pass `URLS=blogs.txt` to also enrich with online co‑mentions
+  - Docs co‑mentions (optional): pass `DOCS=clickhouse-docs` if you have a local clone
 - Preview only the site folder:
   - `make serve-site` (serves from `docs/`)
 - Commit and push `docs/` so Pages can serve it.
@@ -99,4 +107,4 @@ Publishing to GitHub Pages
 Notes on enrichment in site builds
 - `make site`, `make site-beta`, and `make site-data-only` now run enrichment automatically so “Related” is always populated.
 - If you have a local clone of clickhouse-docs, you can pass `DOCS=clickhouse-docs` to include docs co-mentions (e.g., `make site DOCS=clickhouse-docs`).
-- To include blog/release co-mentions, run `make enrich-blogs OUT=settings.json URLS=blog_urls.txt` separately and then re-run the site target if needed.
+- To include blog/release co-mentions, simply pass `URLS=blogs.txt` to any `site*` target, e.g., `make site-all URLS=blogs.txt`.
