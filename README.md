@@ -85,12 +85,18 @@ Make targets (optional)
 - `make generate` — from CHANGELOG (set MINORS/CHANNEL as needed)
 - `make generate-tags` — specify VERSIONS="<tag1> <tag2> ..."
 - `make serve` — run a local static server
+ - `make enrich OUT=settings.json DOCS=clickhouse-docs` — enrich an existing JSON (DOCS optional)
 
 Publishing to GitHub Pages
 - This repo is set up to publish from the `docs/` folder.
-- Build site assets and generate JSON into `docs/` (latest version only by default):
-  - `make site` (equivalent to `make site-static` + `make generate OUT=docs/settings.json MINORS=1`)
+- Build site assets and generate + enrich JSON into `docs/` (latest version only by default):
+  - `make site` (copies UI, generates MINORS=1, and runs enrichment)
 - Preview only the site folder:
   - `make serve-site` (serves from `docs/`)
 - Commit and push `docs/` so Pages can serve it.
 - Note: `.gitignore` ignores the top-level `settings.json` but allows `docs/settings.json` to be committed.
+
+Notes on enrichment in site builds
+- `make site`, `make site-beta`, and `make site-data-only` now run enrichment automatically so “Related” is always populated.
+- If you have a local clone of clickhouse-docs, you can pass `DOCS=clickhouse-docs` to include docs co-mentions (e.g., `make site DOCS=clickhouse-docs`).
+- To include blog/release co-mentions, run `make enrich-blogs OUT=settings.json URLS=blog_urls.txt` separately and then re-run the site target if needed.

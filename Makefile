@@ -58,21 +58,25 @@ site-static: ## Copy static assets to $(SITE_DIR)/
 	cp -f index.html app.js style.css $(SITE_DIR)/
 	@if [ -f subsystems.png ]; then cp -f subsystems.png $(SITE_DIR)/; fi
 
-site: site-static ## Build site assets and generate $(SITE_DIR)/settings.json (latest only)
+site: site-static ## Build site assets, generate JSON (latest), then enrich
 	$(MAKE) generate OUT=$(SITE_DIR)/settings.json MINORS=1 CHANNEL=$(CHANNEL)
+	$(MAKE) enrich OUT=$(SITE_DIR)/settings.json DOCS=$(DOCS)
 
-site-beta: ## Build beta site under $(SITE_DIR)/beta and generate settings.json
+site-beta: ## Build beta site under $(SITE_DIR)/beta, generate JSON (latest), then enrich
 	mkdir -p $(SITE_DIR)/beta
 	cp -f index.html app.js style.css $(SITE_DIR)/beta/
 	@if [ -f subsystems.png ]; then cp -f subsystems.png $(SITE_DIR)/beta/; fi
 	$(MAKE) generate OUT=$(SITE_DIR)/beta/settings.json MINORS=$(BETA_MINORS) CHANNEL=$(BETA_CHANNEL)
+	$(MAKE) enrich OUT=$(SITE_DIR)/beta/settings.json DOCS=$(DOCS)
 
 site-all: site site-beta ## Build both stable (/) and beta (/beta) sites
 
 # Generate only JSON data in docs/ (no UI asset copies)
-site-data-only: ## Generate docs/settings.json (and docs/beta/settings.json); both latest only
+site-data-only: ## Generate + enrich docs/settings.json (and docs/beta/settings.json); both latest only
 	$(MAKE) generate OUT=$(SITE_DIR)/settings.json MINORS=1 CHANNEL=$(CHANNEL)
+	$(MAKE) enrich OUT=$(SITE_DIR)/settings.json DOCS=$(DOCS)
 	$(MAKE) generate OUT=$(SITE_DIR)/beta/settings.json MINORS=$(BETA_MINORS) CHANNEL=$(BETA_CHANNEL)
+	$(MAKE) enrich OUT=$(SITE_DIR)/beta/settings.json DOCS=$(DOCS)
 
 # Promote current root UI to docs/ without regenerating data
 promote-ui: ## Copy index.html/app.js/style.css to docs/ and docs/beta without touching settings.json files
@@ -81,7 +85,7 @@ promote-ui: ## Copy index.html/app.js/style.css to docs/ and docs/beta without t
 	cp -f index.html app.js style.css $(SITE_DIR)/beta/
 
 enrich: ## Enrich OUT=settings.json with related edges and docs mentions (DOCS=clickhouse-docs)
-	python3 enrich_settings.py --in $(OUT) --out $(OUT) --docs $(DOCS)
+	python3 enrich_settings.py --in $(OUT) --out $(OUT) $(if $(DOCS),--docs $(DOCS),)
 
 enrich-blogs: ## Enrich OUT=settings.json using blog/release URLs (URLS=blog_urls.txt)
 	@if [ -z "$(URLS)" ]; then echo "Set URLS=path/to/urls.txt"; exit 1; fi
