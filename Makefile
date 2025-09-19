@@ -58,25 +58,29 @@ site-static: ## Copy static assets to $(SITE_DIR)/
 	cp -f index.html app.js style.css $(SITE_DIR)/
 	@if [ -f subsystems.png ]; then cp -f subsystems.png $(SITE_DIR)/; fi
 
-site: site-static ## Build site assets, generate JSON (latest), then enrich
+site: site-static ## Build site assets, generate JSON (latest), then enrich (+blogs if URLS is set)
 	$(MAKE) generate OUT=$(SITE_DIR)/settings.json MINORS=1 CHANNEL=$(CHANNEL)
 	$(MAKE) enrich OUT=$(SITE_DIR)/settings.json DOCS=$(DOCS)
+	$(if $(URLS),$(MAKE) enrich-blogs OUT=$(SITE_DIR)/settings.json URLS=$(URLS),)
 
-site-beta: ## Build beta site under $(SITE_DIR)/beta, generate JSON (latest), then enrich
+site-beta: ## Build beta site under $(SITE_DIR)/beta, generate JSON (latest), then enrich (+blogs if URLS is set)
 	mkdir -p $(SITE_DIR)/beta
 	cp -f index.html app.js style.css $(SITE_DIR)/beta/
 	@if [ -f subsystems.png ]; then cp -f subsystems.png $(SITE_DIR)/beta/; fi
 	$(MAKE) generate OUT=$(SITE_DIR)/beta/settings.json MINORS=$(BETA_MINORS) CHANNEL=$(BETA_CHANNEL)
 	$(MAKE) enrich OUT=$(SITE_DIR)/beta/settings.json DOCS=$(DOCS)
+	$(if $(URLS),$(MAKE) enrich-blogs OUT=$(SITE_DIR)/beta/settings.json URLS=$(URLS),)
 
 site-all: site site-beta ## Build both stable (/) and beta (/beta) sites
 
 # Generate only JSON data in docs/ (no UI asset copies)
-site-data-only: ## Generate + enrich docs/settings.json (and docs/beta/settings.json); both latest only
+site-data-only: ## Generate + enrich docs/settings.json (and docs/beta/settings.json); both latest only (+blogs if URLS set)
 	$(MAKE) generate OUT=$(SITE_DIR)/settings.json MINORS=1 CHANNEL=$(CHANNEL)
 	$(MAKE) enrich OUT=$(SITE_DIR)/settings.json DOCS=$(DOCS)
+	$(if $(URLS),$(MAKE) enrich-blogs OUT=$(SITE_DIR)/settings.json URLS=$(URLS),)
 	$(MAKE) generate OUT=$(SITE_DIR)/beta/settings.json MINORS=$(BETA_MINORS) CHANNEL=$(BETA_CHANNEL)
 	$(MAKE) enrich OUT=$(SITE_DIR)/beta/settings.json DOCS=$(DOCS)
+	$(if $(URLS),$(MAKE) enrich-blogs OUT=$(SITE_DIR)/beta/settings.json URLS=$(URLS),)
 
 # Promote current root UI to docs/ without regenerating data
 promote-ui: ## Copy index.html/app.js/style.css to docs/ and docs/beta without touching settings.json files

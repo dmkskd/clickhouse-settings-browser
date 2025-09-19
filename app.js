@@ -590,6 +590,8 @@ window.SettingsApp = (() => {
     // Attach rich tooltips to pills (Scope, Topic, Tier)
     attachPillTooltips(els.scopeGroup, (btn) => {
       const v = (btn.dataset.value || '').toLowerCase();
+      const label = (btn.querySelector('.label')?.textContent || btn.textContent || '').trim();
+      const cnt = Number((btn.querySelector('.count')?.textContent || '').trim() || '0');
       const desc = v === 'session' ? 'Session/query settings (system.settings)'
         : v === 'mergetree' ? 'MergeTree storage settings (table-level)'
         : v === 'format' ? 'Input/Output format settings'
@@ -599,7 +601,8 @@ window.SettingsApp = (() => {
         : v === 'format' ? 'https://clickhouse.com/docs/operations/settings/formats'
         : '';
       const link = href ? { href, label: 'Open docs' } : null;
-      return { title: `Scope: ${btn.textContent}`, meta: desc, link };
+      const meta = [desc, cnt ? `${cnt} setting${cnt===1?'':'s'}` : ''].filter(Boolean).join('<br>');
+      return { title: `Scope: ${label}`, meta, link };
     });
     attachPillTooltips(els.topicGroup, (btn) => {
       const name = btn.dataset.value;
@@ -611,11 +614,14 @@ window.SettingsApp = (() => {
     const tierDoc = 'https://clickhouse.com/docs/beta-and-experimental-features';
     attachPillTooltips(els.tierGroup, (btn) => {
       const v = (btn.dataset.value || '').toLowerCase();
+      const label = (btn.querySelector('.label')?.textContent || btn.textContent || '').trim();
+      const cnt = Number((btn.querySelector('.count')?.textContent || '').trim() || '0');
       const desc = v === 'production' ? 'Safe with other production features'
         : v === 'beta' ? 'Stable but interactions may be unknown'
         : v === 'experimental' ? 'In active development'
         : '';
-      return { title: `Tier: ${btn.textContent}`, meta: desc, link: { href: tierDoc, label: 'About Beta & Experimental' } };
+      const meta = [desc, cnt ? `${cnt} setting${cnt===1?'':'s'}` : ''].filter(Boolean).join('<br>');
+      return { title: `Tier: ${label}`, meta, link: { href: tierDoc, label: 'About Beta & Experimental' } };
     });
     // Special pills: Cloud-only and Blog/Release Notes
     attachPillTooltips(els.specialGroup, (btn) => {
