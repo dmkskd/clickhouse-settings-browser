@@ -7,6 +7,32 @@ VERSIONS ?=
 SITE_DIR ?= docs
 BETA_MINORS ?= 1
 BETA_CHANNEL ?= both
+DOCS ?=
+# Auto-detection toggles and defaults
+AUTO_BLOGS ?= 1
+AUTO_DOCS ?= 1
+BLOGS_FILE ?= blogs.txt
+DOCS_DEFAULT ?= clickhouse-docs
+
+# Resolve effective inputs for blogs/doc co-mentions
+# Prefer explicit URLS/DOCS if provided; otherwise, if AUTO_* enabled and paths exist, use them.
+URLS_USE := $(strip $(URLS))
+ifeq ($(URLS_USE),)
+  ifneq ($(strip $(AUTO_BLOGS)),)
+    ifneq (,$(wildcard $(BLOGS_FILE)))
+      URLS_USE := $(BLOGS_FILE)
+    endif
+  endif
+endif
+
+DOCS_USE := $(strip $(DOCS))
+ifeq ($(DOCS_USE),)
+  ifneq ($(strip $(AUTO_DOCS)),)
+    ifneq (,$(wildcard $(DOCS_DEFAULT)))
+      DOCS_USE := $(DOCS_DEFAULT)
+    endif
+  endif
+endif
 
 .DEFAULT_GOAL := help
 .PHONY: help bootstrap refresh generate generate-tags serve clean deep-clean site site-static serve-site clean-site site-beta site-all site-data-only promote-ui enrich
@@ -58,29 +84,29 @@ site-static: ## Copy static assets to $(SITE_DIR)/
 	cp -f index.html app.js style.css $(SITE_DIR)/
 	@if [ -f subsystems.png ]; then cp -f subsystems.png $(SITE_DIR)/; fi
 
-site: site-static ## Build site assets, generate JSON (latest), then enrich (+blogs if URLS is set)
+site: site-static ## Build site assets, generate JSON (latest), then enrich (+blogs/docs if available)
 	$(MAKE) generate OUT=$(SITE_DIR)/settings.json MINORS=1 CHANNEL=$(CHANNEL)
-	$(MAKE) enrich OUT=$(SITE_DIR)/settings.json DOCS=$(DOCS)
-	$(if $(URLS),$(MAKE) enrich-blogs OUT=$(SITE_DIR)/settings.json URLS=$(URLS),)
+	$(MAKE) enrich OUT=$(SITE_DIR)/settings.json DOCS=$(DOCS_USE)
+	$(if $(URLS_USE),$(MAKE) enrich-blogs OUT=$(SITE_DIR)/settings.json URLS=$(URLS_USE),)
 
-site-beta: ## Build beta site under $(SITE_DIR)/beta, generate JSON (latest), then enrich (+blogs if URLS is set)
+site-beta: ## Build beta site under $(SITE_DIR)/beta, generate JSON (latest), then enrich (+blogs/docs if available)
 	mkdir -p $(SITE_DIR)/beta
 	cp -f index.html app.js style.css $(SITE_DIR)/beta/
 	@if [ -f subsystems.png ]; then cp -f subsystems.png $(SITE_DIR)/beta/; fi
 	$(MAKE) generate OUT=$(SITE_DIR)/beta/settings.json MINORS=$(BETA_MINORS) CHANNEL=$(BETA_CHANNEL)
-	$(MAKE) enrich OUT=$(SITE_DIR)/beta/settings.json DOCS=$(DOCS)
-	$(if $(URLS),$(MAKE) enrich-blogs OUT=$(SITE_DIR)/beta/settings.json URLS=$(URLS),)
+	$(MAKE) enrich OUT=$(SITE_DIR)/beta/settings.json DOCS=$(DOCS_USE)
+	$(if $(URLS_USE),$(MAKE) enrich-blogs OUT=$(SITE_DIR)/beta/settings.json URLS=$(URLS_USE),)
 
 site-all: site site-beta ## Build both stable (/) and beta (/beta) sites
 
 # Generate only JSON data in docs/ (no UI asset copies)
-site-data-only: ## Generate + enrich docs/settings.json (and docs/beta/settings.json); both latest only (+blogs if URLS set)
+site-data-only: ## Generate + enrich docs/settings.json (and docs/beta/settings.json); both latest only (+blogs/docs if available)
 	$(MAKE) generate OUT=$(SITE_DIR)/settings.json MINORS=1 CHANNEL=$(CHANNEL)
-	$(MAKE) enrich OUT=$(SITE_DIR)/settings.json DOCS=$(DOCS)
-	$(if $(URLS),$(MAKE) enrich-blogs OUT=$(SITE_DIR)/settings.json URLS=$(URLS),)
+	$(MAKE) enrich OUT=$(SITE_DIR)/settings.json DOCS=$(DOCS_USE)
+	$(if $(URLS_USE),$(MAKE) enrich-blogs OUT=$(SITE_DIR)/settings.json URLS=$(URLS_USE),)
 	$(MAKE) generate OUT=$(SITE_DIR)/beta/settings.json MINORS=$(BETA_MINORS) CHANNEL=$(BETA_CHANNEL)
-	$(MAKE) enrich OUT=$(SITE_DIR)/beta/settings.json DOCS=$(DOCS)
-	$(if $(URLS),$(MAKE) enrich-blogs OUT=$(SITE_DIR)/beta/settings.json URLS=$(URLS),)
+	$(MAKE) enrich OUT=$(SITE_DIR)/beta/settings.json DOCS=$(DOCS_USE)
+	$(if $(URLS_USE),$(MAKE) enrich-blogs OUT=$(SITE_DIR)/beta/settings.json URLS=$(URLS_USE),)
 
 # Promote current root UI to docs/ without regenerating data
 promote-ui: ## Copy index.html/app.js/style.css to docs/ and docs/beta without touching settings.json files

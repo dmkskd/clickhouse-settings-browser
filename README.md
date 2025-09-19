@@ -8,8 +8,8 @@ Live site
 
 Simple build commands
 - Latest only, with Related populated (no network): `make site-all`
-- Include Blogs & Release Notes too: `make site-all URLS=blogs.txt`
-- Include Blogs & Release Notes + docs co‑mentions: `make site-all URLS=blogs.txt DOCS=clickhouse-docs`
+- Include Blogs & Release Notes too: `make site-all URLS=blogs.txt` (auto-detected if `blogs.txt` exists)
+- Include Blogs & Release Notes + docs co‑mentions: `make site-all URLS=blogs.txt DOCS=clickhouse-docs` (docs auto-detected if `clickhouse-docs/` exists)
 - Development is in the project root (`index.html`, `app.js`, `style.css`). The `docs/` folder is only updated by `make site*` targets for publishing.
 
 Contents
@@ -77,7 +77,7 @@ UI features
 - Topic pills: unified Topics (Categories ∪ inferred subsystems), color coded (multi‑select)
 - Tier pills: Production, Beta, Experimental (multi‑select, color coded) — hover for details & link
 - Special pills: Cloud‑only and Blog / Release Notes
-- Search: filters by name/description (debounced), syncs to `?q=`; press `/` to focus
+- Search: filters by name/description (debounced), supports multi‑word AND and quoted phrases (e.g., `lazy materialization`), and syncs to `?q=`
 - Deep links: each setting has a stable `#s-<name>` anchor; a ⧉ button copies a direct link
 - Row chips: Type, Topic, Scope, Tier, Cloud‑only, alias, and a Docs link
 - Help panel: link to official settings docs and a short "How this works" overview
@@ -97,8 +97,8 @@ Publishing to GitHub Pages
 - This repo is set up to publish from the `docs/` folder.
 - Build site assets and generate + enrich JSON into `docs/` (latest version only by default):
   - `make site` (copies UI, generates MINORS=1, and runs enrichment)
-  - Blogs & Release Notes (optional): pass `URLS=blogs.txt` to also enrich with online co‑mentions
-  - Docs co‑mentions (optional): pass `DOCS=clickhouse-docs` if you have a local clone
+  - Blogs & Release Notes (optional): pass `URLS=blogs.txt` to also enrich with online co‑mentions (auto if `blogs.txt` present)
+  - Docs co‑mentions (optional): pass `DOCS=clickhouse-docs` if you have a local clone (auto if `clickhouse-docs/` present)
 - Preview only the site folder:
   - `make serve-site` (serves from `docs/`)
 - Commit and push `docs/` so Pages can serve it.
@@ -106,5 +106,6 @@ Publishing to GitHub Pages
 
 Notes on enrichment in site builds
 - `make site`, `make site-beta`, and `make site-data-only` now run enrichment automatically so “Related” is always populated.
-- If you have a local clone of clickhouse-docs, you can pass `DOCS=clickhouse-docs` to include docs co-mentions (e.g., `make site DOCS=clickhouse-docs`).
-- To include blog/release co-mentions, simply pass `URLS=blogs.txt` to any `site*` target, e.g., `make site-all URLS=blogs.txt`.
+- If you have a local clone of clickhouse-docs, you can pass `DOCS=clickhouse-docs` to include docs co-mentions (auto-detected if present).
+- To include blog/release co-mentions, pass `URLS=blogs.txt` (auto-detected if present).
+- You can disable auto-detection with `AUTO_BLOGS=0` and/or `AUTO_DOCS=0`.

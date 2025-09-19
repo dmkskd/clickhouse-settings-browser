@@ -161,7 +161,7 @@ window.SettingsApp = (() => {
     const version = els.versionSelect.value;
     const scopes = getSelectedScopes();
     const selectedTopics = new Set(getSelectedValues(els.topicGroup || { querySelectorAll: () => [] }));
-    const q = els.searchInput.value.trim().toLowerCase();
+    const qTokens = parseQueryToTokens(els.searchInput.value);
     const selectedTiers = new Set(getSelectedValues(els.tierGroup));
     const specialSel = new Set(getSelectedValues(els.specialGroup || { querySelectorAll: () => [] }));
     const allTopicCount = (els.topicGroup && els.topicGroup.querySelectorAll) ? els.topicGroup.querySelectorAll('.toggle').length : 0;
@@ -191,8 +191,8 @@ window.SettingsApp = (() => {
         const mb = s.mentions && (Array.isArray(s.mentions.blogs) ? s.mentions.blogs.length : 0);
         if (!md && !mb) return false;
       }
-      if (!q) return true;
-      return (s._hayLower || '').includes(q);
+      if (!qTokens.length) return true;
+      return matchesQuery(s._hayLower, qTokens);
     });
 
     // Stats
@@ -736,7 +736,7 @@ window.SettingsApp = (() => {
     const version = els.versionSelect.value;
     const cloudOnly = false; // cloud-only filtering handled via Special pills
     const changedOnly = els.changedOnly.checked;
-    const q = els.searchInput.value.trim().toLowerCase();
+    const qTokens = parseQueryToTokens(els.searchInput.value);
     const selectedTiers = new Set(getSelectedValues(els.tierGroup));
     const selectedTopics = new Set(getSelectedValues(els.topicGroup || { querySelectorAll: () => [] }));
     const allTopicCount = (els.topicGroup && els.topicGroup.querySelectorAll) ? els.topicGroup.querySelectorAll('.toggle').length : 0;
@@ -756,7 +756,7 @@ window.SettingsApp = (() => {
       if (!(selectedTopics.has(cat) || subs.some(x => selectedTopics.has(x)))) return false;
     }
     if (changedOnly && !vinfo?.changed_from_prev) return false;
-    if (q && !(s._hayLower || '').includes(q)) return false;
+    if (!matchesQuery(s._hayLower, qTokens)) return false;
     return true;
   }
 
@@ -894,6 +894,28 @@ window.SettingsApp = (() => {
       if (t) clearTimeout(t);
       t = setTimeout(() => fn.apply(this, args), delay);
     };
+  }
+
+  // Parse search query into tokens: quoted phrases or space-separated words (AND semantics)
+  function parseQueryToTokens(qraw) {
+    const q = String(qraw || '').toLowerCase().trim();
+    if (!q) return [];
+    const toks = [];
+    const re = /"([^"]+)"|(\S+)/g;
+    let m;
+    while ((m = re.exec(q)) !== null) {
+      const tok = (m[1] || m[2] || '').trim();
+      if (tok) toks.push(tok);
+    }
+    return toks;
+  }
+  function matchesQuery(hayLower, tokens) {
+    if (!Array.isArray(tokens) || tokens.length === 0) return true;
+    const hay = String(hayLower || '');
+    for (const t of tokens) {
+      if (!hay.includes(t)) return false;
+    }
+    return true;
   }
 
   function updateTitleVersion() {
