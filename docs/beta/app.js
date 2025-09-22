@@ -42,6 +42,18 @@ window.SettingsApp = (() => {
     for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; }
     return h % 7; // 7-color palette
   }
+
+  // Cache for search tokens to avoid re-parsing on every filter call
+  let __qCachedRaw = null;
+  let __qCachedTokens = [];
+  function getSearchTokens() {
+    const raw = String(els.searchInput && els.searchInput.value || '').toLowerCase().trim();
+    if (raw !== __qCachedRaw) {
+      __qCachedRaw = raw;
+      __qCachedTokens = parseQueryToTokens(raw);
+    }
+    return __qCachedTokens;
+  }
   function topicColorClass(name) {
     return 'tc-' + topicColorIndex(name);
   }
@@ -157,11 +169,11 @@ window.SettingsApp = (() => {
     try { updateFacetCounts(); } catch (e) { dlog('updateFacetCounts error', e); }
   }
 
-  function renderList() {
+  function renderList(updateFacets = true) {
     const version = els.versionSelect.value;
     const scopes = getSelectedScopes();
     const selectedTopics = new Set(getSelectedValues(els.topicGroup || { querySelectorAll: () => [] }));
-    const qTokens = parseQueryToTokens(els.searchInput.value);
+    const qTokens = getSearchTokens();
     const selectedTiers = new Set(getSelectedValues(els.tierGroup));
     const specialSel = new Set(getSelectedValues(els.specialGroup || { querySelectorAll: () => [] }));
     const allTopicCount = (els.topicGroup && els.topicGroup.querySelectorAll) ? els.topicGroup.querySelectorAll('.toggle').length : 0;
@@ -258,31 +270,7 @@ window.SettingsApp = (() => {
           ${history.length ? `<details><summary>Version history</summary>${history.map(h => `<div class="history-row"><span class="tag">${h.version_minor}</span> <code>${escapeHtml(h.new_default)}</code> — ${escapeHtml(h.comment)}</div>`).join('')}</details>` : ''}
         </div>
       `;
-      // Wire copy-link button
-      try {
-        const btn = row.querySelector('.copylink');
-        if (btn) {
-          btn.addEventListener('click', (ev) => {
-            ev.preventDefault();
-            const base = String(window.location.href).split('#')[0];
-            const url = `${base}#${row.id}`;
-            const done = () => {
-              const prev = btn.title;
-              btn.title = 'Copied!';
-              setTimeout(() => { try { btn.title = prev; } catch {} }, 1200);
-            };
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-              navigator.clipboard.writeText(url).then(done).catch(done);
-            } else {
-              try {
-                const ta = document.createElement('textarea');
-                ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-              } catch {}
-              done();
-            }
-          });
-        }
-      } catch {}
+      // Copy-link handled via delegated click listener on the list container
       // Attach hidden subsystems list to "+N" chip for tooltip
       try {
         const more = row.querySelector('.chip.subsys.more');
@@ -366,14 +354,15 @@ window.SettingsApp = (() => {
     });
     els.list.innerHTML = '';
     els.list.appendChild(frag);
-      try { attachSubsysChipTooltips(); } catch {}
     try { attachSubsysChipTooltips(); } catch {}
     // Remember current state for next control rebuild
     try {
       lastScopes = new Set(scopes);
       lastApplyTopicFilter = applyTopicFilter;
     } catch {}
-    try { updateFacetCounts(); } catch (e) { dlog('updateFacetCounts error', e); }
+    if (updateFacets) {
+      try { updateFacetCounts(); } catch (e) { dlog('updateFacetCounts error', e); }
+    }
 
     // If a hash is present, try to focus the corresponding row
     try {
@@ -428,8 +417,10 @@ window.SettingsApp = (() => {
     els.versionSelect.addEventListener('change', () => { updateTitleVersion(); renderList(); updateUrlFromState(); });
     if (els.topicGroup) els.topicGroup.addEventListener('change', () => { renderList(); updateUrlFromState(); });
     els.tierGroup.addEventListener('change', () => { renderList(); updateUrlFromState(); });
-    const debounced = debounce(() => { updateUrlFromState(); renderList(); }, 200);
-    els.searchInput.addEventListener('input', debounced);
+    // Search: render list quickly without recomputing facet counts, then update counts after idle
+    const quickList = debounce(() => { updateUrlFromState(); renderList(false); }, 80);
+    const slowFacets = debounce(() => { renderList(true); }, 280);
+    els.searchInput.addEventListener('input', () => { quickList(); slowFacets(); });
     if (els.cloudOnly) els.cloudOnly.addEventListener('change', () => { renderList(); updateUrlFromState(); });
     if (els.changedOnly) els.changedOnly.addEventListener('change', () => { renderList(); updateUrlFromState(); });
     const sg = el('specialGroup');
@@ -452,6 +443,29 @@ window.SettingsApp = (() => {
       const h = (window.location.hash || '').replace(/^#/, '');
       if (h) focusRowById(h);
     });
+    // Delegated click for copy-link buttons
+    if (els.list) {
+      els.list.addEventListener('click', (ev) => {
+        const btn = ev.target && ev.target.closest && ev.target.closest('.copylink');
+        if (!btn) return;
+        const row = btn.closest('.setting');
+        if (!row || !row.id) return;
+        ev.preventDefault();
+        const base = String(window.location.href).split('#')[0];
+        const url = `${base}#${row.id}`;
+        const done = () => {
+          const prev = btn.title;
+          btn.title = 'Copied!';
+          setTimeout(() => { try { btn.title = prev; } catch {} }, 1200);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(done).catch(done);
+        } else {
+          try { const ta = document.createElement('textarea'); ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); } catch {}
+          done();
+        }
+      });
+    }
   }
 
   async function loadData() {
@@ -760,7 +774,7 @@ window.SettingsApp = (() => {
     const version = els.versionSelect.value;
     const cloudOnly = false; // cloud-only filtering handled via Special pills
     const changedOnly = els.changedOnly.checked;
-    const qTokens = parseQueryToTokens(els.searchInput.value);
+    const qTokens = getSearchTokens();
     const selectedTiers = new Set(getSelectedValues(els.tierGroup));
     const selectedTopics = new Set(getSelectedValues(els.topicGroup || { querySelectorAll: () => [] }));
     const allTopicCount = (els.topicGroup && els.topicGroup.querySelectorAll) ? els.topicGroup.querySelectorAll('.toggle').length : 0;
