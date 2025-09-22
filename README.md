@@ -2,6 +2,13 @@ ClickHouse Settings Browser
 
 Simple, local viewer for ClickHouse settings across versions. It parses the ClickHouse source code to extract settings, defaults, tier (Production/Beta/Experimental), Cloud‑only flags, and version history, and renders them in a compact UI with filters.
 
+- Uses the official ClickHouse source as the source of truth (Session, MergeTree, Formats) with defaults and version history.
+- Enriches settings with Related suggestions (naming families, co‑changes, docs/blog co‑mentions) and short “Insights” snippets.
+- Clear filters: Scope, Topic, Tier, and Special (Cloud‑only, Blogs/Release Notes); deep‑link to any row.
+- Search supports multi‑word AND and quoted phrases; results update live.
+- Shareable, stateful URLs: the full filter state is encoded in the querystring (`q`, `v`, `scopes`, `topics`, `tiers`, `special`, `changed`) so recipients see exactly the same view; row anchors use `#s-<name>`.
+- Ready for GitHub Pages; site builds generate the latest version and auto‑run enrichment; optional auto‑detection for blogs/docs.
+
 Live site
 - Stable: https://dmkskd.github.io/clickhouse-settings-browser/
 - Beta: https://dmkskd.github.io/clickhouse-settings-browser/beta/

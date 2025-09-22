@@ -424,18 +424,18 @@ window.SettingsApp = (() => {
   }
 
   function attachEvents() {
-    els.scopeGroup.addEventListener('change', () => { renderControls(); renderList(); updateTitleVersion(); });
-    els.versionSelect.addEventListener('change', () => { updateTitleVersion(); renderList(); });
-    if (els.topicGroup) els.topicGroup.addEventListener('change', renderList);
-    els.tierGroup.addEventListener('change', renderList);
-    const debounced = debounce(() => { updateSearchParam(els.searchInput.value); renderList(); }, 200);
+    els.scopeGroup.addEventListener('change', () => { renderControls(); renderList(); updateTitleVersion(); updateUrlFromState(); });
+    els.versionSelect.addEventListener('change', () => { updateTitleVersion(); renderList(); updateUrlFromState(); });
+    if (els.topicGroup) els.topicGroup.addEventListener('change', () => { renderList(); updateUrlFromState(); });
+    els.tierGroup.addEventListener('change', () => { renderList(); updateUrlFromState(); });
+    const debounced = debounce(() => { updateUrlFromState(); renderList(); }, 200);
     els.searchInput.addEventListener('input', debounced);
-    if (els.cloudOnly) els.cloudOnly.addEventListener('change', renderList);
-    if (els.changedOnly) els.changedOnly.addEventListener('change', renderList);
+    if (els.cloudOnly) els.cloudOnly.addEventListener('change', () => { renderList(); updateUrlFromState(); });
+    if (els.changedOnly) els.changedOnly.addEventListener('change', () => { renderList(); updateUrlFromState(); });
     const sg = el('specialGroup');
-    if (sg) sg.addEventListener('change', renderList);
+    if (sg) sg.addEventListener('change', () => { renderList(); updateUrlFromState(); });
     const refs = el('referencesOnly');
-    if (refs) refs.addEventListener('change', renderList);
+    if (refs) refs.addEventListener('change', () => { renderList(); updateUrlFromState(); });
     // Focus search with '/'
     window.addEventListener('keydown', (ev) => {
       if (ev.key === '/' && !ev.altKey && !ev.metaKey && !ev.ctrlKey) {
@@ -503,19 +503,43 @@ window.SettingsApp = (() => {
     applySavedTheme();
     els.themeToggle.addEventListener('click', toggleTheme);
 
-    // Restore q from URL, if any, before loading
+    // Restore state from URL (q may be set before data load)
     try {
-      const u = new URL(window.location.href);
-      const q = u.searchParams.get('q');
-      if (q) els.searchInput.value = q;
+      const st = parseStateFromUrl();
+      if (st.q) els.searchInput.value = st.q;
     } catch {}
     await loadData();
     renderControls();
+    // Apply full state to controls before wiring events
+    try {
+      const st = parseStateFromUrl();
+      // Version
+      if (st.v && els.versionSelect && Array.from(els.versionSelect.options).some(o => o.value === st.v)) {
+        els.versionSelect.value = st.v;
+      }
+      const applySet = (container, vals) => {
+        if (!container || !Array.isArray(vals)) return;
+        const set = new Set(vals);
+        Array.from(container.querySelectorAll('.toggle')).forEach(b => {
+          const sel = set.has(b.dataset.value);
+          b.classList.toggle('selected', sel);
+          b.setAttribute('aria-pressed', sel ? 'true' : 'false');
+        });
+      };
+      if (st.scopes) applySet(els.scopeGroup, st.scopes);
+      if (st.tiers) applySet(els.tierGroup, st.tiers);
+      if (st.special) applySet(els.specialGroup, st.special);
+      if (st.topics) applySet(els.topicGroup, st.topics);
+      if (typeof st.changed === 'boolean' && els.changedOnly) {
+        els.changedOnly.checked = !!st.changed;
+      }
+    } catch {}
     updateTitleVersion();
     if (els.topicAll && els.topicGroup) els.topicAll.addEventListener('click', () => setAllSelected(els.topicGroup, true));
     if (els.topicNone && els.topicGroup) els.topicNone.addEventListener('click', () => setAllSelected(els.topicGroup, false));
     attachEvents();
     renderList();
+    updateUrlFromState();
   }
 
   function combinedDataset(scopes) {
@@ -937,12 +961,45 @@ window.SettingsApp = (() => {
     return true;
   }
 
-  // Sync `q` param in URL when search changes; empty removes it
-  function updateSearchParam(q) {
+  // Parse full filter state from URL
+  function parseStateFromUrl() {
+    const out = {};
+    try {
+      const sp = new URL(window.location.href).searchParams;
+      const getList = (k) => {
+        const v = sp.get(k);
+        if (!v) return null;
+        return v.split(',').map(s => s.trim()).filter(Boolean);
+      };
+      out.q = sp.get('q') || '';
+      out.v = sp.get('v') || '';
+      out.scopes = getList('scopes');
+      out.topics = getList('topics');
+      out.tiers = getList('tiers');
+      out.special = getList('special');
+      out.changed = sp.get('changed') === '1';
+    } catch {}
+    return out;
+  }
+
+  // Write full filter state to URL (preserve hash)
+  function updateUrlFromState() {
     try {
       const url = new URL(window.location.href);
-      if (q && q.trim()) url.searchParams.set('q', q);
-      else url.searchParams.delete('q');
+      const setList = (k, arr) => {
+        if (Array.isArray(arr) && arr.length) url.searchParams.set(k, arr.join(','));
+        else url.searchParams.delete(k);
+      };
+      const q = (els.searchInput && els.searchInput.value) || '';
+      if (q && q.trim()) url.searchParams.set('q', q.trim()); else url.searchParams.delete('q');
+      const v = (els.versionSelect && els.versionSelect.value) || '';
+      if (v) url.searchParams.set('v', v); else url.searchParams.delete('v');
+      setList('scopes', getSelectedValues(els.scopeGroup));
+      setList('topics', getSelectedValues(els.topicGroup || { querySelectorAll: () => [] }));
+      setList('tiers', getSelectedValues(els.tierGroup));
+      setList('special', getSelectedValues(els.specialGroup || { querySelectorAll: () => [] }));
+      const changed = !!(els.changedOnly && els.changedOnly.checked);
+      if (changed) url.searchParams.set('changed', '1'); else url.searchParams.delete('changed');
       const next = url.toString();
       if (next !== window.location.href) window.history.replaceState(null, '', next);
     } catch {}
