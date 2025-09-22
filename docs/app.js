@@ -1021,7 +1021,17 @@ window.SettingsApp = (() => {
 
   function applySavedTheme() {
     const saved = localStorage.getItem('theme');
-    const theme = saved === 'light' ? 'light' : 'dark';
+    let theme;
+    if (saved === 'light' || saved === 'dark') {
+      theme = saved;
+    } else {
+      try {
+        const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+        theme = prefersLight ? 'light' : 'dark';
+      } catch {
+        theme = 'light';
+      }
+    }
     document.documentElement.setAttribute('data-theme', theme);
     if (els.themeToggle) els.themeToggle.textContent = theme === 'light' ? '☀️' : '🌙';
   }
