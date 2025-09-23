@@ -235,6 +235,8 @@ window.SettingsApp = (() => {
       // Use a short snippet for description to keep rendering fast
       const descFull = s.description || '';
       const descSnippet = descFull.substring(0, 240);
+      const nameHtml = highlightMatches(s.name, qTokens);
+      const descHtml = highlightMatches(descSnippet, qTokens);
       const catName = s.category || 'Uncategorized';
       const catClass = 'v-' + String(catName).toLowerCase().replace(/[^a-z0-9_-]/g,'');
       const catColor = topicColorClass(catName);
@@ -245,7 +247,7 @@ window.SettingsApp = (() => {
       const subsHiddenCSV = subsystems.slice(1).join(', ').replace(/&/g,'&amp;').replace(/\"/g,'&quot;').replace(/"/g,'&quot;');
       row.innerHTML = `
         <div class="h">
-          <div class="name">${s.name}
+          <div class="name">${nameHtml}
             ${docUrl ? `<a class="doclink" href="${docUrl}" target="_blank" rel="noopener noreferrer" aria-label="Open docs for ${s.name}" title="Open docs">🔗</a>` : ''}
             <button class="copylink" type="button" title="Copy link to this setting" aria-label="Copy link">⧉</button>
           </div>
@@ -265,7 +267,7 @@ window.SettingsApp = (() => {
           <div class="default"><span class="label">Default:</span> <code>${fmtDefault(def)}</code></div>
           <details>
             <summary>Description</summary>
-            <div class="desc">${escapeHtml(descSnippet)}${descFull.length > 240 ? (docUrl ? ` <a class="ellipsis-link" href="${docUrl}" target="_blank" rel="noopener noreferrer" title="Open docs for ${s.name}">…</a>` : '…') : ''}</div>
+            <div class="desc">${descHtml}${descFull.length > 240 ? (docUrl ? ` <a class="ellipsis-link" href="${docUrl}" target="_blank" rel="noopener noreferrer" title="Open docs for ${s.name}">…</a>` : '…') : ''}</div>
           </details>
           ${history.length ? `<details><summary>Version history</summary>${history.map(h => `<div class="history-row"><span class="tag">${h.version_minor}</span> <code>${escapeHtml(h.new_default)}</code> — ${escapeHtml(h.comment)}</div>`).join('')}</details>` : ''}
         </div>
@@ -410,6 +412,43 @@ window.SettingsApp = (() => {
 
   function escapeHtml(s) {
     return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+  }
+
+  // Highlight occurrences of tokens in text (case-insensitive) with <mark class="hl">.
+  // Returns safe HTML (escapes non-marked text and marked segments).
+  function highlightMatches(text, tokens) {
+    const src = String(text || '');
+    if (!Array.isArray(tokens) || tokens.length === 0) return escapeHtml(src);
+    const lower = src.toLowerCase();
+    const toks = Array.from(new Set(tokens.map(t => String(t || '').toLowerCase()).filter(Boolean)))
+      .sort((a, b) => b.length - a.length); // longest-first
+    if (toks.length === 0) return escapeHtml(src);
+    const taken = new Array(src.length).fill(false);
+    const ranges = [];
+    for (const t of toks) {
+      if (!t) continue;
+      let idx = 0;
+      while ((idx = lower.indexOf(t, idx)) !== -1) {
+        let overlap = false;
+        for (let i = idx; i < idx + t.length; i++) { if (taken[i]) { overlap = true; break; } }
+        if (!overlap) {
+          ranges.push([idx, idx + t.length]);
+          for (let i = idx; i < idx + t.length; i++) taken[i] = true;
+        }
+        idx += t.length;
+      }
+    }
+    if (ranges.length === 0) return escapeHtml(src);
+    ranges.sort((a, b) => a[0] - b[0]);
+    let out = '';
+    let pos = 0;
+    for (const [a, b] of ranges) {
+      if (a > pos) out += escapeHtml(src.slice(pos, a));
+      out += '<mark class="hl">' + escapeHtml(src.slice(a, b)) + '</mark>';
+      pos = b;
+    }
+    if (pos < src.length) out += escapeHtml(src.slice(pos));
+    return out;
   }
 
   function attachEvents() {

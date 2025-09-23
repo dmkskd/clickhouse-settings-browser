@@ -204,3 +204,5 @@ summary { cursor: pointer; color: var(--accent); }
 .mention { margin: 4px 0; color: var(--muted); }
 .mention a { color: var(--accent); font-weight: 600; text-decoration: none; }
 .mention a:hover { text-decoration: underline; }
+/* Search highlight */
+mark.hl { background: rgba(255, 235, 59, 0.35); color: inherit; padding: 0 2px; border-radius: 2px; }
