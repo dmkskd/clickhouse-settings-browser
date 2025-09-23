@@ -86,6 +86,7 @@ Simple, local viewer for ClickHouse settings across versions. It parses the Clic
 
 ## Licensing
 - Code in this repository is licensed under the Apache License 2.0. See `LICENSE`.
+- The project extracts and redistributes setting metadata (e.g., names, defaults, descriptions, version history) from the ClickHouse open‑source repository (https://github.com/ClickHouse/ClickHouse), which is licensed under the Apache License 2.0. No upstream source files are bundled; data is parsed into JSON and rendered by the UI.
 - The generated data (e.g., `settings.json`) may include:
   - Short excerpts and links from the ClickHouse documentation (https://github.com/ClickHouse/clickhouse-docs), under Creative Commons CC BY‑NC‑SA 4.0. Excerpts are brief and include a source link. CC BY‑NC‑SA terms (attribution, non‑commercial, share‑alike for adaptations) apply to the quoted text only.
   - Short excerpts, titles, and links from clickhouse.com blog/release notes (© ClickHouse, Inc.).
