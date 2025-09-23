@@ -1,0 +1,31 @@
+ClickHouse Settings Browser — NOTICE
+
+This project is licensed under the Apache License, Version 2.0. See LICENSE for details.
+
+Attributions and third‑party content
+
+1) ClickHouse source code (Apache License 2.0)
+   - This project analyzes data derived from the ClickHouse open‑source project
+     (https://github.com/ClickHouse/ClickHouse), which is licensed under the
+     Apache License 2.0.
+
+2) ClickHouse Documentation (CC BY‑NC‑SA 4.0)
+   - The generated data may include short excerpts and links from the ClickHouse
+     documentation (https://github.com/ClickHouse/clickhouse-docs), provided
+     under the Creative Commons Attribution–NonCommercial–ShareAlike 4.0 license:
+     https://creativecommons.org/licenses/by-nc-sa/4.0/
+   - Excerpts are brief (e.g., truncated to ~220 characters) and include a link
+     back to the source page.
+
+3) ClickHouse blog / release notes
+   - The generated data may include short excerpts, titles, and links from
+     clickhouse.com blog and release posts (© ClickHouse, Inc.). These items are
+     shown for reference with links to the original source.
+
+Notes
+ - Only the generated data may contain the above excerpts. The project’s source
+   code is original work licensed under Apache‑2.0.
+ - When redistributing datasets that contain excerpts from the documentation,
+   the CC BY‑NC‑SA 4.0 conditions apply to those excerpts (attribution,
+   non‑commercial, and share‑alike for adaptations of the quoted text).
+

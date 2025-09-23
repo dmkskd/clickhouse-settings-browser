@@ -94,6 +94,14 @@ Tips
 - Update `categories.yaml` to refine grouping; first matching rule wins, unmatched go to “Uncategorized”.
  - Development happens in the project root (index.html/app.js/style.css). The `docs/` folder is only for publishing.
 
+Licensing
+- Code in this repository is licensed under the Apache License 2.0. See `LICENSE`.
+- The generated data (e.g., `settings.json`) may include:
+  - Short excerpts and links from the ClickHouse documentation (https://github.com/ClickHouse/clickhouse-docs), provided under the Creative Commons CC BY‑NC‑SA 4.0 license. Excerpts are brief and include a source link. The CC BY‑NC‑SA terms (attribution, non‑commercial, share‑alike for adaptations) apply to the quoted text only.
+  - Short excerpts, titles, and links from clickhouse.com blog/release notes (© ClickHouse, Inc.).
+- See `NOTICE` for attribution details.
+- To avoid excerpts entirely (links only), do not pass `DOCS=` and `URLS=` (or disable auto‑detection via `AUTO_DOCS=0`/`AUTO_BLOGS=0`) when building.
+
 Make targets (optional)
 - `make generate` — from CHANGELOG (set MINORS/CHANNEL as needed)
 - `make generate-tags` — specify VERSIONS="<tag1> <tag2> ..."
